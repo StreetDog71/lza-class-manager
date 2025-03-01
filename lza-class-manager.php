@@ -452,6 +452,26 @@ class LZA_Class_Manager {
     }
     
     /**
+     * Get all CSS variables from theme.json
+     */
+    private function get_all_theme_json_css_variables() {
+        $variables = array();
+        
+        // Get the compiled CSS from global stylesheet
+        $css = wp_get_global_stylesheet();
+        
+        // Extract all CSS variable declarations using regex
+        preg_match_all('/(--wp--[a-zA-Z0-9-]+)\s*:/', $css, $matches);
+        
+        if (!empty($matches[1])) {
+            $variables = array_unique($matches[1]);
+            sort($variables); // Sort variables alphabetically
+        }
+        
+        return $variables;
+    }
+    
+    /**
      * Render admin page
      */
     public function render_admin_page() {
@@ -495,20 +515,42 @@ class LZA_Class_Manager {
         if ($error_message) {
             echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($error_message) . '</p></div>';
         }
+
+        // Get CSS variables from theme.json
+        $css_variables = $this->get_all_theme_json_css_variables();
+        
         ?>
         <div class="wrap">
             <h1>LZA Class Manager</h1>
-            <p>Edit your custom CSS classes below. These classes will be available in the Class Manager panel in the block editor.</p>
+            <p>Edit your custom CSS classes below. These classes will be available in the LZA Class Manager panel in the block editor.</p>
             <form method="post" action="">
                 <?php wp_nonce_field('lza_save_css', 'lza_css_nonce'); ?>
-                <div class="lza-css-editor-container">
-                    <div class="lza-editor-header">
-                        <h2>Custom Classes CSS</h2>
-                        <div class="lza-editor-actions">
-                            <button type="submit" class="button button-primary">Save Changes</button>
+                <div class="lza-editor-layout">
+                    <div class="lza-css-editor-container">
+                        <div class="lza-editor-header">
+                            <h2>Custom Classes CSS</h2>
+                            <div class="lza-editor-actions">
+                                <button type="submit" class="button button-primary">Save Changes</button>
+                            </div>
+                        </div>
+                        <textarea id="lza_custom_css" name="lza_custom_css" rows="20" class="large-text code"><?php echo esc_textarea($css_content); ?></textarea>
+                    </div>
+                    
+                    <?php if (!empty($css_variables)): ?>
+                    <div class="lza-variables-sidebar">
+                        <div class="lza-variables-header">
+                            <h3>Theme CSS Variables</h3>
+                            <p class="description">Click a variable to insert it at the cursor position</p>
+                        </div>
+                        <div class="lza-variables-list">
+                            <?php foreach ($css_variables as $variable): ?>
+                                <div class="lza-css-variable" data-variable="<?php echo esc_attr($variable); ?>">
+                                    <?php echo esc_html($variable); ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-                    <textarea id="lza_custom_css" name="lza_custom_css" rows="20" class="large-text code"><?php echo esc_textarea($css_content); ?></textarea>
+                    <?php endif; ?>
                 </div>
             </form>
         </div>
@@ -609,6 +651,67 @@ class LZA_Class_Manager {
             }, 1000); // Check after 1 second
         });
         </script>
+        
+        <!-- Script for handling CSS variables - REPLACING previous implementation -->
+        <script>
+        jQuery(document).ready(function($) {
+            // Make sure we don't double-bind click events
+            $('.lza-css-variable').off('click').on('click', function() {
+                var variable = $(this).data('variable');
+                
+                // Find CodeMirror instance directly
+                var cmInstance = null;
+                
+                // Try to find the CodeMirror instance
+                if (window.lzaCodeMirror) {
+                    // Use the globally stored instance
+                    cmInstance = window.lzaCodeMirror;
+                } else {
+                    // Fall back to searching for it
+                    $('.CodeMirror').each(function() {
+                        if (this.CodeMirror) {
+                            cmInstance = this.CodeMirror;
+                            return false; // Break the loop
+                        }
+                    });
+                }
+                
+                // Insert at cursor position
+                if (cmInstance) {
+                    var doc = cmInstance.getDoc();
+                    var cursor = doc.getCursor();
+                    doc.replaceRange('var(' + variable + ')', cursor);
+                    
+                    // Focus the editor
+                    cmInstance.focus();
+                    
+                    // Show visual feedback
+                    $(this).addClass('inserted');
+                    setTimeout(function() {
+                        $('.lza-css-variable').removeClass('inserted');
+                    }, 500);
+                } else {
+                    // Fallback - insert at textarea
+                    var $textarea = $('#lza_custom_css');
+                    var text = $textarea.val();
+                    var pos = $textarea.prop('selectionStart');
+                    var textToInsert = 'var(' + variable + ')';
+                    
+                    $textarea.val(
+                        text.substring(0, pos) + 
+                        textToInsert + 
+                        text.substring(pos)
+                    );
+                    
+                    // Set cursor position after inserted text
+                    $textarea.prop('selectionStart', pos + textToInsert.length);
+                    $textarea.prop('selectionEnd', pos + textToInsert.length);
+                    $textarea.focus();
+                }
+            });
+        });
+        </script>
+        
         <?php
     }
 }

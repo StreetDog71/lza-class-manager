@@ -5,7 +5,7 @@
     'use strict';
     
     $(document).ready(function() {
-        console.log('LZA Class Manager: Admin JS loaded');
+        console.log('Admin JS loaded, initializing editor...');
         
         if (typeof wp === 'undefined') {
             console.error('WordPress object not available');
@@ -35,6 +35,9 @@
             var editor = wp.codeEditor.initialize($textarea, lzaEditorSettings.settings);
             var cm = editor.codemirror;
             
+            // Make CodeMirror instance available globally for the CSS variable sidebar
+            window.lzaCodeMirror = cm;
+            
             // Add theme selector
             setTimeout(function() {
                 addThemeSelector(cm);
@@ -45,6 +48,46 @@
                 cm.refresh();
                 cm.focus();
             }, 300);
+            
+            // Remove any existing handlers before adding new ones
+            $('.lza-css-variable').off('click');
+            
+            // Add handler for clicking on CSS variables
+            $('.lza-css-variable').on('click', function() {
+                var variable = $(this).data('variable');
+                if (cm) {
+                    // Insert at cursor position
+                    var doc = cm.getDoc();
+                    var cursor = doc.getCursor();
+                    doc.replaceRange('var(' + variable + ')', cursor);
+                    
+                    // Focus the editor
+                    cm.focus();
+                    
+                    // Show visual feedback
+                    $(this).addClass('inserted');
+                    setTimeout(function() {
+                        $('.lza-css-variable').removeClass('inserted');
+                    }, 500);
+                }
+            });
+            
+            // Add filter for CSS variables
+            var $filterInput = $('<input type="text" class="lza-filter-variables" placeholder="Filter variables..." />');
+            $('.lza-variables-header').append($filterInput);
+            
+            $filterInput.on('input', function() {
+                var filter = $(this).val().toLowerCase();
+                
+                $('.lza-css-variable').each(function() {
+                    var variableName = $(this).text().toLowerCase();
+                    if (variableName.includes(filter)) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
             
         } catch (e) {
             console.error('Error initializing code editor:', e);

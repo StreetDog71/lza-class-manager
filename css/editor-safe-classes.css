@@ -70,35 +70,31 @@
 
 .editor-styles-wrapper .gap-40,
 .block-editor-block-list__block.gap-40 {
- gap: 40px; }
+ gap: var(--wp--preset--spacing--40) }
 
 .editor-styles-wrapper .text-white,
 .block-editor-block-list__block.text-white {
+ color: #ffffff; }
 
-	color: #ffffff;
-}
-
-.editor-styles-wrapper .md-p-l,
-.block-editor-block-list__block.md-p-l {
+.editor-styles-wrapper .m-p-l,
+.block-editor-block-list__block.m-p-l {
  padding: 2rem; }
 
 .editor-styles-wrapper .m-gap-20,
 .block-editor-block-list__block.m-gap-20 {
  gap: 20px; }
 
-.editor-styles-wrapper .sm-p-m,
-.block-editor-block-list__block.sm-p-m {
+.editor-styles-wrapper .s-p-m,
+.block-editor-block-list__block.s-p-m {
  padding: 1rem; }
 
 .editor-styles-wrapper .s-gap-10,
 .block-editor-block-list__block.s-gap-10 {
  gap: 10px; }
 
-@media  (max-width: 1024px) {
-    .md-p-l { padding: 2rem; } {
+@media (max-width: 1024px) {
 }
 
-@media  (max-width: 768px) {
-    .sm-p-m { padding: 1rem; } {
+@media (max-width: 768px) {
 }
 
