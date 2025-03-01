@@ -28,39 +28,60 @@ class LZA_Class_Manager {
      * Constructor
      */
     public function __construct() {
-        // Frontend hooks
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'));
+        // Frontend hooks - only load custom classes
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_styles'));
         
-        // Editor hooks
+        // Editor hooks - only load editor-safe classes in the editor
         add_action('enqueue_block_editor_assets', array($this, 'enqueue_editor_assets'));
-        add_action('enqueue_block_assets', array($this, 'enqueue_block_editor_assets'));
         
         // Admin hooks
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         
-        // Register AJAX handler - add this here instead of inside admin_enqueue_scripts
+        // Register AJAX handler
         add_action('wp_ajax_lza_save_editor_theme', array($this, 'save_editor_theme'));
     }
 
     /**
      * Enqueue frontend styles
      */
-    public function enqueue_styles() {
-        // Enqueue the user custom classes first
-        wp_enqueue_style(
-            'lza-custom-classes',
-            LZA_CLASS_MANAGER_URL . 'css/custom-classes.css',
-            array(),
-            filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css')
-        );
+    public function enqueue_frontend_styles() {
+        // Check if minified version exists and use it for better performance
+        if (file_exists(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css')) {
+            wp_enqueue_style(
+                'lza-custom-classes',
+                LZA_CLASS_MANAGER_URL . 'css/custom-classes.min.css',
+                array(),
+                filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css')
+            );
+        } else {
+            // Fall back to the regular version if minified doesn't exist
+            wp_enqueue_style(
+                'lza-custom-classes',
+                LZA_CLASS_MANAGER_URL . 'css/custom-classes.css',
+                array(),
+                filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css')
+            );
+        }
     }
 
     /**
      * Enqueue editor assets
      */
     public function enqueue_editor_assets() {
+        // In the editor, only load the editor-safe classes (non-minified version)
+        $editor_css_path = LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css';
+        
+        if (file_exists($editor_css_path)) {
+            wp_enqueue_style(
+                'lza-editor-safe-classes',
+                LZA_CLASS_MANAGER_URL . 'css/editor-safe-classes.css',
+                array(),
+                filemtime($editor_css_path)
+            );
+        }
+        
         // Editor-only scripts
         $asset_file = include(LZA_CLASS_MANAGER_PATH . 'build/index.asset.php');
         
@@ -82,29 +103,6 @@ class LZA_Class_Manager {
 
         // Pass CSS classes to JavaScript
         $this->localize_class_data();
-    }
-
-    /**
-     * Enqueue block editor assets
-     */
-    public function enqueue_block_editor_assets() {
-        // Enqueue custom classes
-        wp_enqueue_style(
-            'lza-custom-classes-editor',
-            LZA_CLASS_MANAGER_URL . 'css/custom-classes.css',
-            array(),
-            filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css')
-        );
-        
-        // Also enqueue editor-safe classes if they exist
-        if (file_exists(LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css')) {
-            wp_enqueue_style(
-                'lza-editor-safe-classes',
-                LZA_CLASS_MANAGER_URL . 'css/editor-safe-classes.css',
-                array('lza-custom-classes-editor'),
-                filemtime(LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css')
-            );
-        }
     }
 
     /**
@@ -172,8 +170,9 @@ class LZA_Class_Manager {
             return '';
         }
         
-        // Get the file path
+        // Get the file paths
         $css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css';
+        $min_css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css';
         
         // Ensure the css directory exists
         $css_dir = dirname($css_file_path);
@@ -197,7 +196,7 @@ class LZA_Class_Manager {
             }
         }
         
-        // Save the CSS content to file
+        // Save the original CSS content to file
         $result = file_put_contents($css_file_path, $input);
         
         if ($result === false) {
@@ -208,6 +207,10 @@ class LZA_Class_Manager {
                 'error'
             );
         } else {
+            // Create minified version for frontend
+            $minified_css = $this->minify_css($input);
+            file_put_contents($min_css_file_path, $minified_css);
+            
             // Generate editor-safe CSS after successful save
             $this->generate_editor_safe_css($input);
         }
@@ -215,6 +218,66 @@ class LZA_Class_Manager {
         return $input;
     }
     
+    /**
+     * Simple CSS Minification
+     * 
+     * @param string $css The CSS to minify
+     * @return string Minified CSS
+     */
+    private function minify_css($css) {
+        // Store original length for comparison
+        $original_length = strlen($css);
+        
+        // Remove comments
+        $css = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $css);
+        
+        // Remove spaces after colons, semicolons, commas, brackets, etc.
+        $css = preg_replace('/\s*([\{\};:,>+~])\s*/', '$1', $css);
+        
+        // Remove unnecessary spaces
+        $css = preg_replace('/\s+/', ' ', $css);
+        
+        // Remove all newlines, tabs, multiple spaces
+        $css = str_replace(array("\r\n", "\r", "\n", "\t"), '', $css);
+        
+        // Remove spaces around brackets
+        $css = str_replace('{ ', '{', $css);
+        $css = str_replace(' }', '}', $css);
+        $css = str_replace('; ', ';', $css);
+        $css = str_replace(', ', ',', $css);
+        $css = str_replace(' {', '{', $css);
+        $css = str_replace('} ', '}', $css);
+        $css = str_replace(': ', ':', $css);
+        
+        // Remove trailing semicolons
+        $css = str_replace(';}', '}', $css);
+        
+        // Remove leading zeros from decimal values
+        $css = preg_replace('/([^0-9])0+\.([0-9]+)/', '$1.$2', $css);
+        
+        // Remove zero units
+        $css = str_replace(array('0px', '0em', '0rem', '0%'), '0', $css);
+        
+        // Replace multiple zeros
+        $css = preg_replace('/\s0 0 0 0;/', ':0;', $css);
+        $css = preg_replace('/\s0 0 0;/', ':0;', $css);
+        $css = preg_replace('/\s0 0;/', ':0;', $css);
+        
+        // Replace hex colors with short notation when possible
+        $css = preg_replace('/#([a-f0-9])\1([a-f0-9])\2([a-f0-9])\3/i', '#$1$2$3', $css);
+        
+        // Single line, ultra-compressed version
+        $minified_css = "/* Minified CSS */\n" . $css;
+        
+        // Only use minified version if it's actually smaller than the original
+        if (strlen($minified_css) < $original_length) {
+            return $minified_css;
+        } else {
+            // If the minified version is larger or equal, just return the cleaned original
+            return "/* Optimized CSS */\n" . $css;
+        }
+    }
+
     /**
      * Generate editor-safe CSS from the custom CSS
      */
@@ -274,9 +337,21 @@ class LZA_Class_Manager {
         // Write the generated CSS to file
         file_put_contents($editor_css_path, $editor_css);
         
+        // Remove any minified version if it exists to ensure it's not used
+        $min_editor_css_path = LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.min.css';
+        if (file_exists($min_editor_css_path)) {
+            @unlink($min_editor_css_path);
+        }
+        
         // Log completion if in debug mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('LZA Class Manager: Generated editor-safe CSS');
+        }
+        
+        // Force update of style version in the editor if it's being used
+        if (wp_style_is('lza-editor-safe-classes', 'enqueued')) {
+            $version = filemtime($editor_css_path);
+            wp_styles()->registered['lza-editor-safe-classes']->ver = $version;
         }
         
         return true;
@@ -511,10 +586,39 @@ class LZA_Class_Manager {
         // Get CSS variables from theme.json
         $css_variables = $this->get_all_theme_json_css_variables();
         
+        // Check if minified file exists and its size
+        $min_css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css';
+        $css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css';
+        
+        if (file_exists($min_css_file_path) && file_exists($css_file_path)) {
+            $min_size = filesize($min_css_file_path);
+            $orig_size = filesize($css_file_path);
+            $savings = $orig_size - $min_size;
+            $percent = ($orig_size > 0) ? round(($savings / $orig_size) * 100, 1) : 0;
+            
+            if ($min_size < $orig_size) {
+                echo '<p class="lza-minify-info">
+                    Minified file size: <strong>' . $this->format_file_size($min_size) . '</strong>
+                    (Original: ' . $this->format_file_size($orig_size) . ') - 
+                    <strong>' . $percent . '% reduction</strong>
+                </p>';
+            } else {
+                echo '<p class="lza-minify-info" style="border-left-color:#dc3545;">
+                    Minified file is not smaller than original. Using optimized version.
+                </p>';
+            }
+        }
+        
         ?>
         <div class="wrap">
             <h1>LZA Class Manager</h1>
             <p>Edit your custom CSS classes below. These classes will be available in the LZA Class Manager panel in the block editor.</p>
+            <?php if (file_exists($min_css_file_path)): ?>
+            <p class="lza-minify-info">
+                Minified file size: <strong><?php echo esc_html($min_size); ?></strong> 
+                (Original: <?php echo esc_html($orig_size); ?>)
+            </p>
+            <?php endif; ?>
             <form method="post" action="">
                 <?php wp_nonce_field('lza_save_css', 'lza_css_nonce'); ?>
                 <div class="lza-editor-layout">
@@ -705,6 +809,18 @@ class LZA_Class_Manager {
         </script>
         
         <?php
+    }
+    
+    /**
+     * Format file size for display
+     * 
+     * @param int $size File size in bytes
+     * @return string Formatted size with unit
+     */
+    private function format_file_size($size) {
+        $units = array('B', 'KB', 'MB');
+        $power = $size > 0 ? floor(log($size, 1024)) : 0;
+        return number_format($size / pow(1024, $power), 2) . ' ' . $units[$power];
     }
 }
 

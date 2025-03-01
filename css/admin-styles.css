@@ -329,6 +329,20 @@
     }
 }
 
+/* Minify info display */
+.lza-minify-info {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007cba;
+    padding: 10px 15px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #555;
+}
+
+.lza-minify-info strong {
+    color: #007cba;
+}
+
 /* Responsive adjustments */
 @media screen and (max-width: 960px) {
     .lza-editor-layout {
