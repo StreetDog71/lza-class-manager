@@ -1,0 +1,17 @@
+{
+  "name": "lza-class-manager",
+  "version": "1.0.0",
+  "description": "Class manager for WordPress blocks",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "format": "wp-scripts format",
+    "lint:js": "wp-scripts lint-js"
+  },
+  "author": "Lazy Algorithm",
+  "license": "GPL-2.0-or-later",
+  "devDependencies": {
+    "@wordpress/scripts": "^26.0.0"
+  }
+}

@@ -1,0 +1,212 @@
+/* Admin page styles */
+.lza-css-editor-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    margin: 20px 0;
+    padding: 0;
+    position: relative;
+}
+
+/* Update the header layout to use a 3-column grid */
+.lza-editor-header {
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    padding: 12px 15px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+}
+
+.lza-editor-header h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+    grid-column: 1;
+}
+
+.lza-editor-actions {
+    grid-column: 3;
+    justify-content: flex-end;
+    display: flex;
+    align-items: center;
+}
+
+/* Enhanced CodeMirror styling */
+.CodeMirror {
+    border: none !important;
+    height: 70vh !important;
+    min-height: 500px;
+    font-family: monospace !important;
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+}
+
+/* Gutter and line numbers */
+.CodeMirror-linenumbers {
+    padding-right: 10px !important;
+}
+
+.CodeMirror-linenumber {
+    color: #999 !important;
+    opacity: 0.75;
+    font-size: 12px !important;
+}
+
+.lza-help-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    margin: 20px 0;
+    padding: 15px 20px;
+}
+
+.lza-help-section h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.lza-help-section code {
+    background: #f0f0f0;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+/* Keyboard shortcuts panel */
+.lza-editor-shortcuts {
+    position: absolute;
+    right: 15px;
+    bottom: 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    width: 300px;
+    z-index: 100;
+    font-size: 13px;
+}
+
+.lza-shortcuts-toggle {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lza-shortcuts-panel {
+    border-top: 1px solid #eee;
+    padding: 10px;
+}
+
+.lza-shortcuts-panel table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.lza-shortcuts-panel th {
+    text-align: left;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+.lza-shortcuts-panel td {
+    padding: 5px;
+}
+
+.lza-shortcuts-panel kbd {
+    display: inline-block;
+    padding: 2px 4px;
+    font-size: 11px;
+    line-height: 1;
+    color: #444;
+    background-color: #f7f7f7;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+    margin: 0 2px;
+}
+
+/* Auto-save notice */
+.lza-auto-save-notice {
+    margin-left: 15px;
+    color: #999;
+    font-style: italic;
+    font-size: 12px;
+}
+
+/* Theme selector */
+.lza-theme-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    grid-column: 2;
+}
+
+.lza-theme-selector label {
+    margin-right: 5px;
+    font-weight: 500;
+}
+
+.lza-theme-selector select {
+    min-width: 120px;
+    font-size: 13px;
+}
+
+/* Fullscreen button */
+.lza-fullscreen-btn {
+    display: none !important;
+}
+
+.CodeMirror-gutters {
+    border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Theme-specific tweaks */
+.CodeMirror.cm-s-dracula {
+    color: #f8f8f2 !important; 
+    background-color: #282a36 !important;
+}
+
+/* Fixed styling for any theme */
+.CodeMirror .CodeMirror-gutters {
+    height: auto !important; /* Fix gutters height issue */
+}
+
+/* Adjust z-index for WordPress admin environment */
+.CodeMirror-hints {
+    z-index: 999999 !important;
+}
+
+@media screen and (max-width: 782px) {
+    .CodeMirror.CodeMirror-fullscreen {
+        top: 46px; /* Mobile admin bar is taller */
+    }
+}
+
+/* Better notice styling */
+.notice {
+    margin: 15px 0 !important;
+}
+
+.lza-debug-section {
+    margin-top: 30px;
+    padding: 15px;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+}
+
+.lza-debug-tools button {
+    margin-right: 10px;
+}
+
+#lza-ajax-result {
+    display: inline-block;
+    margin-left: 10px;
+    font-style: italic;
+    padding: 5px 10px;
+    background: #f0f0f0;
+    border-radius: 3px;
+}

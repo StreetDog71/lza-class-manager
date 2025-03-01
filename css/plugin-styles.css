@@ -1,0 +1,140 @@
+/* Editor-only styles */
+.class-button {
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    color: #333333;
+    padding: 5px;
+    line-height: 1;
+    font-size: 12px;
+    text-align: center;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.class-button:hover {
+    background-color: #dc3545;
+    color: #ffffff;
+    border-color: #dc3545;
+}
+
+/* Hide datalist arrow */
+input::-webkit-calendar-picker-indicator {
+    display: none !important;
+    opacity: 0;
+}
+
+/* Class suggestion styles */
+.class-suggestions {
+    margin-top: 4px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.class-suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s ease;
+}
+
+.class-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.class-suggestion-item:hover,
+.class-suggestion-item.is-selected {
+    background-color: #f7f7f7;
+}
+
+/* Drag and drop styling */
+.lza-class-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    min-height: 30px;
+    padding-bottom: 10px;
+}
+
+.lza-class-button-wrapper {
+    display: inline-flex;
+    position: relative;
+    cursor: grab;
+}
+
+.lza-class-button-wrapper.is-dragging {
+    opacity: 0.7;
+    z-index: 100;
+}
+
+.lza-class-button-wrapper.dragging-active {
+    visibility: hidden;
+}
+
+.lza-class-button-wrapper.drag-over {
+    transform: translateX(2px);
+}
+
+.lza-class-button-wrapper .class-button {
+    cursor: grab;
+}
+
+.lza-class-button-wrapper:active .class-button {
+    cursor: grabbing;
+}
+
+/* Class preview for drag and drop */
+.lza-class-preview {
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 4px;
+    opacity: 0.6;
+    display: inline-block;
+}
+
+.lza-no-classes {
+    color: #888;
+    font-style: italic;
+    margin: 0;
+    padding: 10px 0;
+}
+
+/* Input form - updated for no button */
+.lza-class-form {
+    width: 100%;
+}
+
+.lza-class-form .components-base-control {
+    width: 100%;
+}
+
+.lza-class-input {
+    width: 100%;
+}
+
+/* Make sure the input field styling is preserved */
+.lza-class-input input {
+    width: 100%;
+    border: 1px solid #8d96a0;
+    border-radius: 2px;
+    padding: 6px 8px;
+    transition: box-shadow 0.1s linear;
+}
+
+.lza-class-input input:focus {
+    border-color: #007cba;
+    box-shadow: 0 0 0 1px #007cba;
+    outline: 2px solid transparent;
+}
+
+/* Hide drag handles and remove buttons */
+.class-button-drag-handle,
+.class-button-remove,
+.lza-drag-instructions {
+    display: none !important;
+}
