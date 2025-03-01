@@ -29,7 +29,7 @@ A WordPress plugin for managing custom CSS classes for Gutenberg blocks.
 3. Use the theme variables panel to insert theme.json CSS variables
 4. Changes are applied when you save
 
-## CSS Variables Panel
+### CSS Variables Panel
 
 The CSS Variables panel displays all available CSS variables from your theme.json file:
 
@@ -37,7 +37,7 @@ The CSS Variables panel displays all available CSS variables from your theme.jso
 2. Use the filter box to quickly find specific variables
 3. Variables are automatically wrapped in `var()` when inserted
 
-## Drag and Drop
+### Drag and Drop
 
 Classes can be reordered using drag and drop:
 
@@ -47,7 +47,7 @@ Classes can be reordered using drag and drop:
 
 This feature helps maintain a logical order of classes for better readability and organization.
 
-## Theme Support
+### Theme Support
 
 The plugin includes built-in support for different editor themes:
 
@@ -56,7 +56,7 @@ The plugin includes built-in support for different editor themes:
 
 Your theme preference is saved automatically when you switch themes.
 
-## Media Queries
+### Media Queries
 
 You can define responsive classes using standard CSS media queries in the editor:
 
