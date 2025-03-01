@@ -9,23 +9,66 @@ A WordPress plugin for managing custom CSS classes for Gutenberg blocks.
 - Auto-suggestion of available classes
 - Custom CSS editor for class definitions
 - Light and dark theme support for the CSS editor
+- Theme.json CSS variables sidebar for easy access to theme variables
+- Editor-safe class generation for proper block editor previews
+- Media query support for responsive classes
 
 ## Usage
 
-1. Install and activate the plugin
-2. Edit any block and find the "Class Manager" panel in the block settings sidebar
+### Class Manager Panel
+
+1. Edit any block in the WordPress editor
+2. Find the "Class Manager" panel in the block settings sidebar
 3. Add, remove, or reorder classes as needed
-4. To customize available classes, go to Tools > LZA Classes
+4. Changes take effect immediately in the editor
+
+### CSS Editor
+
+1. Go to Tools > LZA Class Manager in the WordPress admin
+2. Edit your custom CSS classes in the editor
+3. Use the theme variables panel to insert theme.json CSS variables
+4. Changes are applied when you save
+
+## CSS Variables Panel
+
+The CSS Variables panel displays all available CSS variables from your theme.json file:
+
+1. Click any variable to insert it at the cursor position in the editor
+2. Use the filter box to quickly find specific variables
+3. Variables are automatically wrapped in `var()` when inserted
 
 ## Drag and Drop
 
 Classes can be reordered using drag and drop:
 
-1. Click and hold on the class button you want to move
+1. Click and hold on a class button
 2. Drag it to the desired position
 3. Release to drop it in its new position
 
 This feature helps maintain a logical order of classes for better readability and organization.
+
+## Theme Support
+
+The plugin includes built-in support for different editor themes:
+
+- Light (Default)
+- Dark (Dracula)
+
+Your theme preference is saved automatically when you switch themes.
+
+## Media Queries
+
+You can define responsive classes using standard CSS media queries in the editor:
+
+```css
+@media (max-width: 768px) {
+    .sm-p-m {
+        padding: 1rem;
+    }
+}
+```
+
+These classes will work correctly in both the editor and the frontend.
 
 ## Development
 

@@ -1,8 +1,8 @@
 .p-s { padding: 0.25rem; }
 .p-m { padding: 0.5rem; }
 .p-l { padding: 1rem; }
-.p-xl { padding: 3rem; }
-.px-xl { padding-inline: 4rem; }
+.p-xl { padding: var(--wp--preset--spacing--80); }
+.px-xl { padding-inline: var(--wp--preset--spacing--80); }
 
 .bg-red { background-color: red; }
 

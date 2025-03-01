@@ -14,11 +14,11 @@
 
 .editor-styles-wrapper .p-xl,
 .block-editor-block-list__block.p-xl {
- padding: 3rem; }
+ padding: var(--wp--preset--spacing--80); }
 
 .editor-styles-wrapper .px-xl,
 .block-editor-block-list__block.px-xl {
- padding-inline: 4rem; }
+ padding-inline: var(--wp--preset--spacing--80); }
 
 .editor-styles-wrapper .bg-red,
 .block-editor-block-list__block.bg-red {
