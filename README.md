@@ -17,33 +17,33 @@ A WordPress plugin for managing custom CSS classes for Gutenberg blocks.
 
 ### Class Manager Panel
 
-1. Edit any block in the WordPress editor
-2. Find the "Class Manager" panel in the block settings sidebar
-3. Add, remove, or reorder classes as needed
-4. Changes take effect immediately in the editor
+- Edit any block in the WordPress editor
+- Find the "Class Manager" panel in the block settings sidebar
+- Add, remove, or reorder classes as needed
+- Changes take effect immediately in the editor
 
 ### CSS Editor
 
-1. Go to Tools > LZA Class Manager in the WordPress admin
-2. Edit your custom CSS classes in the editor
-3. Use the theme variables panel to insert theme.json CSS variables
-4. Changes are applied when you save
+- Go to Tools > LZA Class Manager in the WordPress admin
+- Edit your custom CSS classes in the editor
+- Use the theme variables panel to insert theme.json CSS variables
+- Changes are applied when you save
 
 ### CSS Variables Panel
 
 The CSS Variables panel displays all available CSS variables from your theme.json file:
 
-1. Click any variable to insert it at the cursor position in the editor
-2. Use the filter box to quickly find specific variables
-3. Variables are automatically wrapped in `var()` when inserted
+- Click any variable to insert it at the cursor position in the editor
+- Use the filter box to quickly find specific variables
+- Variables are automatically wrapped in `var()` when inserted
 
 ### Drag and Drop
 
 Classes can be reordered using drag and drop:
 
-1. Click and hold on a class button
-2. Drag it to the desired position
-3. Release to drop it in its new position
+- Click and hold on a class button
+- Drag it to the desired position
+- Release to drop it in its new position
 
 This feature helps maintain a logical order of classes for better readability and organization.
 

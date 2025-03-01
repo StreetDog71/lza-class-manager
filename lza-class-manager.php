@@ -55,14 +55,6 @@ class LZA_Class_Manager {
             array(),
             filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css')
         );
-        
-        // Then load the frontend overrides (higher specificity)
-        wp_enqueue_style(
-            'lza-frontend-overrides',
-            LZA_CLASS_MANAGER_URL . 'css/frontend-overrides.css',
-            array('lza-custom-classes'),
-            LZA_CLASS_MANAGER_VERSION
-        );
     }
 
     /**
