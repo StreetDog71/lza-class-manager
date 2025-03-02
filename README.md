@@ -1,81 +1,80 @@
 # LZA Class Manager
 
-A WordPress plugin for managing custom CSS classes for Gutenberg blocks.
+A WordPress plugin for managing custom CSS classes in the Gutenberg block editor.
+
+## Description
+
+LZA Class Manager provides an intuitive interface for adding and managing CSS classes to blocks in the WordPress block editor (Gutenberg). The plugin allows you to create and edit custom CSS classes through a central admin panel, and then easily apply those classes to any block through a dedicated sidebar panel in the editor.
 
 ## Features
 
-- Add and remove CSS classes to any block
-- Reorder classes with drag and drop (using react-beautiful-dnd)
-- Auto-suggestion of available classes
-- Custom CSS editor for class definitions
-- Light and dark theme support for the CSS editor
-- Theme.json CSS variables sidebar for easy access to theme variables
-- Editor-safe class generation for proper block editor previews
-- Media query support for responsive classes
-- Fully implemented with modern WordPress coding standards using React
+- **Custom CSS Editor**: Write and manage CSS classes in a dedicated admin interface with syntax highlighting
+- **Class Suggestions**: Auto-suggests available classes as you type in the editor panel
+- **Drag & Drop**: Reorder classes with intuitive drag and drop functionality
+- **Keyboard Navigation**: Full keyboard support for suggestions with arrow keys
+- **Theme Integration**: Automatically picks up CSS variables from your active theme
+- **Performance Optimized**: Automatically minifies CSS for frontend delivery while keeping the source readable
+- **Editor Preview**: Instantly see your custom classes applied to blocks in the editor
+- **Responsive Classes**: Support for media query-based responsive classes
+- **Dark Mode Support**: Editor theme switching for comfortable coding
+- **Developer Friendly**: Well-organized code with hooks for customization
+
+## Installation
+
+- Upload the plugin files to the `/wp-content/plugins/lza-class-manager` directory, or install the plugin through the WordPress plugins screen directly.
+- Activate the plugin through the 'Plugins' screen in WordPress
+- Navigate to 'Tools' → 'LZA Class Manager' to create and edit your custom CSS classes
+- In the block editor, select a block and find the "LZA Class Manager" panel in the block settings sidebar
 
 ## Usage
 
-### Class Manager Panel
+### Creating Custom Classes
 
-- Edit any block in the WordPress editor
-- Find the "Class Manager" panel in the block settings sidebar
-- Add, remove, or reorder classes as needed
-- Changes take effect immediately in the editor
+- Go to 'Tools' → 'LZA Class Manager'
+- Use the CSS editor to add your custom classes
+- Click "Save Changes" to update your classes
 
-### CSS Editor
+Example:
+```css
+.p-l {
+    padding: 1rem;
+}
 
-- Go to Tools > LZA Class Manager in the WordPress admin
-- Edit your custom CSS classes in the editor
-- Use the theme variables panel to insert theme.json CSS variables
-- Changes are applied when you save
+.text-center {
+    text-align: center;
+}
 
-### CSS Variables Panel
+/* Responsive classes */
+@media (max-width: 768px) {
+    .s-p-m {
+        padding: 1rem;
+    }
+}
+```
 
-The CSS Variables panel displays all available CSS variables from your theme.json file:
+### Applying Classes to Blocks
 
-- Click any variable to insert it at the cursor position in the editor
-- Use the filter box to quickly find specific variables
-- Variables are automatically wrapped in `var()` when inserted
+- In the block editor, select a block
+- Find the "LZA Class Manager" panel in the block settings sidebar
+- Type to search for a class or select from the suggestions
+- Click a class to remove it, or drag to reorder
 
-### Drag and Drop
+## Recent Updates
 
-Classes can be reordered using drag and drop:
-
-- Click and hold on a class button
-- Drag it to the desired position
-- Release to drop it in its new position
-
-This feature is implemented using react-beautiful-dnd for accessibility and smooth animations.
+- **File Information Panel**: Added a dedicated panel showing file sizes and storage location
+- **Improved Media Query Support**: Fixed issues with media queries to ensure editor preview matches frontend
+- **Enhanced Class Handling**: Class buttons now combine drag-and-drop with click-to-delete functionality
+- **Keyboard Navigation**: Added keyboard navigation for class suggestions with auto-scrolling
+- **Dark Mode Theme**: Added Dracula theme option for the code editor
+- **UI Improvements**: Better styling and visual feedback
 
 ## Technical Details
 
-This plugin is built using modern WordPress development practices:
+- CSS files are stored in the WordPress uploads directory (`/wp-content/uploads/lza-css/`)
+- The plugin generates minified CSS for the frontend and editor-safe CSS for the block editor
+- Editor-safe CSS includes wrapper selectors to ensure classes work properly in the editor context
+- WordPress admin design guidelines are followed for a consistent experience
 
-- React components for the UI
-- React Beautiful DnD for drag and drop functionality
-- WordPress coding standards throughout
-- Proper Webpack build process through @wordpress/scripts
-- CSS minification for production use
+## Support & Development
 
-## Development
-
-### Requirements
-
-- Node.js and npm
-- WordPress 5.8+
-
-### Setup
-
-```bash
-npm install
-npm run build
-```
-
-### Available Commands
-
-- `npm run start` - Start development build with watch mode
-- `npm run build` - Build for production
-- `npm run format` - Format code
-- `npm run lint:js` - Lint JavaScript files
-- `npm run lint:css` - Lint CSS files
+This plugin is maintained by Lazy Algorithm. For support requests, feature suggestions, or bug reports, please contact us or open an issue on the plugin repository.
