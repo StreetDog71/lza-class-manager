@@ -327,13 +327,13 @@ class LZA_CSS_Processor {
         }
         
         // Prepend a comment
-        $minified_css = "/* LZA Minified CSS - Root variables loaded separately */\n" . $css;
+        $minified_css = $css;
         
         // Only use the minified version if it's actually smaller
         if (strlen($minified_css) < $original_length) {
             return $minified_css;
         } else {
-            return "/* LZA Optimized CSS - Root variables loaded separately */\n" . $css;
+            return $css;
         }
     }
 
@@ -347,7 +347,7 @@ class LZA_CSS_Processor {
         $editor_css_path = $paths['editor_css_path'];
         
         // Start with a clean slate
-        $editor_css = "/* Editor-safe classes - Generated automatically */\n\n";
+        $editor_css = "";
         
         // First, extract any :root variables and add them directly
         $root_variables = $this->extract_root_variables($css_content);
