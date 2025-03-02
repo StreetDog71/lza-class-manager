@@ -12,13 +12,20 @@
     --space-4xl: clamp(3.05rem, calc(10.13vw + 1.02rem), 9.89rem);
 }
 
+.p-0 { padding: 0; }
 .p-s { padding: 0.25rem; }
 .p-m { padding: 0.5rem; }
 .p-l { padding: var(--wp--preset--spacing--30); }
 .p-xl { padding: var(--wp--preset--spacing--80); }
 .px-xl { padding-inline: var(--wp--preset--spacing--80); }
 
+.m-0 { margin: 0; }
+.mx-0 { margin-inline: 0; }
+.my-0 { margin-block: 0; }
+
 .bg-red { background-color: red; }
+.bg-blue { background-color: blue; }
+.bg-green { background-color: green; }
 
 .text-center { text-align: center; }
 
