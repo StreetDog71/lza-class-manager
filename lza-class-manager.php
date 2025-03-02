@@ -459,7 +459,11 @@ class LZA_Class_Manager {
         // Start with a clean slate
         $editor_css = "/* Editor-safe classes - Generated automatically */\n\n";
         
-        // Process regular classes first (outside media queries)
+        // First, extract any :root variables and add them directly
+        $root_variables = $this->extract_root_variables($css_content);
+        $editor_css .= $root_variables;
+        
+        // Process regular classes (outside media queries)
         $standard_classes = $this->extract_regular_classes($css_content);
         $editor_css .= $standard_classes;
         
@@ -473,14 +477,33 @@ class LZA_Class_Manager {
         // Log completion if in debug mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('LZA Class Manager: Generated editor-safe CSS in uploads directory');
-            
-            // Debug log the generated CSS content
-            error_log('Editor CSS content: ' . substr($editor_css, 0, 500) . '...');
+            error_log('LZA Class Manager: Root variables: ' . substr($root_variables, 0, 200) . '...');
+            error_log('LZA Class Manager: Editor CSS content: ' . substr($editor_css, 0, 500) . '...');
         }
         
         return true;
     }
     
+    /**
+     * Extract :root CSS variables
+     * 
+     * @param string $css_content Full CSS content
+     * @return string CSS with root variables
+     */
+    private function extract_root_variables($css_content) {
+        $output = '';
+        
+        // Match the entire :root block
+        if (preg_match('/:root\s*{([^}]+)}/s', $css_content, $match)) {
+            // Keep the :root block exactly as is in original CSS
+            $output .= ":root {\n" . $match[1] . "}\n\n";
+            
+            // No need to duplicate variables to .editor-styles-wrapper as they're already available in :root
+        }
+        
+        return $output;
+    }
+
     /**
      * Extract regular classes (not in media queries)
      * 
@@ -490,11 +513,15 @@ class LZA_Class_Manager {
     private function extract_regular_classes($css_content) {
         $output = '';
         
-        // First, remove all media queries to avoid duplicates
-        $css_without_media = preg_replace('/@media[^{]*\{[^}]*\}[^}]*\}/s', '', $css_content);
+        // Remove :root blocks to avoid duplicate processing
+        $css_without_root = preg_replace('/:root\s*{[^}]+}/s', '', $css_content);
+        
+        // Remove media queries to avoid duplicates
+        $css_without_media = preg_replace('/@media[^{]*\{[^}]*\}[^}]*\}/s', '', $css_without_root);
         
         // Now extract all remaining class selectors and their rules
-        if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s', $css_without_media, $matches, PREG_SET_ORDER)) {
+        if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s', 
+                          $css_without_media, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
                 if (isset($match[1]) && isset($match[2])) {
                     $class_name = $match[1];
@@ -511,7 +538,7 @@ class LZA_Class_Manager {
         
         return $output;
     }
-    
+
     /**
      * Extract classes from media queries
      * 
