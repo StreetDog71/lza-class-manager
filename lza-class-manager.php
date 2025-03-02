@@ -76,6 +76,8 @@ class LZA_Class_Manager {
             'custom_css_url' => trailingslashit($uploads_url) . 'custom-classes.css',
             'custom_css_min_path' => trailingslashit($uploads_path) . 'custom-classes.min.css',
             'custom_css_min_url' => trailingslashit($uploads_url) . 'custom-classes.min.css',
+            'root_vars_path' => trailingslashit($uploads_path) . 'root-vars.css',
+            'root_vars_url' => trailingslashit($uploads_url) . 'root-vars.css',
             'editor_css_path' => trailingslashit($uploads_path) . 'editor-safe-classes.css',
             'editor_css_url' => trailingslashit($uploads_url) . 'editor-safe-classes.css',
             'plugin_custom_css' => LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css',
@@ -142,12 +144,22 @@ class LZA_Class_Manager {
     public function enqueue_frontend_styles() {
         $paths = $this->get_css_paths();
         
-        // Check if minified version exists and use it for better performance
+        // First enqueue the root variables file if it exists (with no minification)
+        if (file_exists($paths['root_vars_path'])) {
+            wp_enqueue_style(
+                'lza-root-vars',
+                $paths['root_vars_url'],
+                array(),
+                filemtime($paths['root_vars_path'])
+            );
+        }
+        
+        // Then enqueue the minified class styles
         if (file_exists($paths['custom_css_min_path'])) {
             wp_enqueue_style(
                 'lza-custom-classes',
                 $paths['custom_css_min_url'],
-                array(),
+                array('lza-root-vars'),  // Make classes depend on vars
                 filemtime($paths['custom_css_min_path'])
             );
         } elseif (file_exists($paths['custom_css_path'])) {
@@ -155,7 +167,7 @@ class LZA_Class_Manager {
             wp_enqueue_style(
                 'lza-custom-classes',
                 $paths['custom_css_url'],
-                array(),
+                array('lza-root-vars'),  // Make classes depend on vars
                 filemtime($paths['custom_css_path'])
             );
         } else {
@@ -351,11 +363,12 @@ class LZA_Class_Manager {
         $paths = $this->get_css_paths();
         $css_file_path = $paths['custom_css_path'];
         $min_css_file_path = $paths['custom_css_min_path'];
+        $root_vars_path = $paths['root_vars_path'];
         
         // Ensure the css directory exists
         $this->ensure_css_directories();
         
-        // Make sure the file is writable
+        // Make sure the directory is writable
         if (!is_writable(dirname($css_file_path))) {
             add_settings_error(
                 'lza_custom_css',
@@ -366,8 +379,19 @@ class LZA_Class_Manager {
             return $input;
         }
         
-        // Save the original CSS content to file
-        $result = file_put_contents($css_file_path, $input);
+        // Extract root variables and save to separate file
+        $root_vars = $this->extract_root_variables($input);
+        if (!empty($root_vars)) {
+            file_put_contents($root_vars_path, $root_vars);
+            
+            // Remove root variables from the CSS content for the classes file
+            $classes_only_css = preg_replace('/:root\s*{[^}]+}/s', '', $input);
+        } else {
+            $classes_only_css = $input;
+        }
+        
+        // Save the non-root CSS content to file
+        $result = file_put_contents($css_file_path, $classes_only_css);
         
         if ($result === false) {
             add_settings_error(
@@ -377,19 +401,19 @@ class LZA_Class_Manager {
                 'error'
             );
         } else {
-            // Create minified version for frontend
-            $minified_css = $this->minify_css($input);
+            // Create minified version for frontend (only for class styles, not root vars)
+            $minified_css = $this->minify_css($classes_only_css);
             file_put_contents($min_css_file_path, $minified_css);
             
-            // Generate editor-safe CSS after successful save
-            $this->generate_editor_safe_css($input);
+            // Generate editor-safe CSS after successful save (includes both vars and classes)
+            $this->generate_editor_safe_css($input);  // Use the full original input for editor CSS
         }
         
         return $input;
     }
     
     /**
-     * Simple CSS Minification
+     * Improved CSS Minification with better handling of CSS functions
      * 
      * @param string $css The CSS to minify
      * @return string Minified CSS
@@ -401,13 +425,32 @@ class LZA_Class_Manager {
         // Remove comments
         $css = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $css);
         
+        // Temporary replace CSS functions like calc(), clamp(), etc. to protect their content
+        $placeholder_prefix = 'CSS_FUNCTION_PLACEHOLDER_';
+        $placeholder_count = 0;
+        $placeholders = array();
+        
+        // Match CSS functions: function_name(any content including spaces and nested parentheses)
+        $css = preg_replace_callback('/(?<function>calc|clamp|min|max|var)\((?<content>[^()]*(?:\([^()]*\)[^()]*)*)\)/i',
+            function ($matches) use (&$placeholder_count, &$placeholders, $placeholder_prefix) {
+                // Create a unique placeholder
+                $placeholder = $placeholder_prefix . $placeholder_count++;
+                // Store the full function with content
+                $placeholders[$placeholder] = $matches[0];
+                return $placeholder;
+            },
+            $css
+        );
+        
+        // Now proceed with regular minification (spaces are safe to remove)
+        
         // Remove spaces after colons, semicolons, commas, brackets, etc.
         $css = preg_replace('/\s*([\{\};:,>+~])\s*/', '$1', $css);
         
-        // Remove unnecessary spaces
+        // Remove unnecessary spaces that aren't next to operators
         $css = preg_replace('/\s+/', ' ', $css);
         
-        // Remove all newlines, tabs, multiple spaces
+        // Remove all newlines, tabs
         $css = str_replace(array("\r\n", "\r", "\n", "\t"), '', $css);
         
         // Remove spaces around brackets
@@ -436,6 +479,11 @@ class LZA_Class_Manager {
         // Replace hex colors with short notation when possible
         $css = preg_replace('/#([a-f0-9])\1([a-f0-9])\2([a-f0-9])\3/i', '#$1$2$3', $css);
         
+        // Now restore all the CSS function placeholders
+        foreach ($placeholders as $placeholder => $original) {
+            $css = str_replace($placeholder, $original, $css);
+        }
+        
         // Single line, ultra-compressed version
         $minified_css = "/* Minified CSS */\n" . $css;
         
@@ -451,6 +499,7 @@ class LZA_Class_Manager {
     /**
      * Generate editor-safe CSS from the custom CSS
      * Fix handling of media queries to properly include nested classes
+     * Now also handles root variables
      */
     private function generate_editor_safe_css($css_content) {
         $paths = $this->get_css_paths();
@@ -497,8 +546,6 @@ class LZA_Class_Manager {
         if (preg_match('/:root\s*{([^}]+)}/s', $css_content, $match)) {
             // Keep the :root block exactly as is in original CSS
             $output .= ":root {\n" . $match[1] . "}\n\n";
-            
-            // No need to duplicate variables to .editor-styles-wrapper as they're already available in :root
         }
         
         return $output;
@@ -896,28 +943,25 @@ class LZA_Class_Manager {
         $paths = $this->get_css_paths();
         $min_css_file_path = $paths['custom_css_min_path'];
         $css_file_path = $paths['custom_css_path'];
+        $root_vars_path = $paths['root_vars_path'];
         $file_info_html = '';
         
+        // Build file information display
         if (file_exists($min_css_file_path) && file_exists($css_file_path)) {
             $min_size = filesize($min_css_file_path);
             $orig_size = filesize($css_file_path);
+            $vars_size = file_exists($root_vars_path) ? filesize($root_vars_path) : 0;
+            
             $savings = $orig_size - $min_size;
             $percent = ($orig_size > 0) ? round(($savings / $orig_size) * 100, 1) : 0;
             
+            // Show file sizes
             if ($min_size < $orig_size) {
                 $file_info_html .= '<p>
                     <span class="dashicons dashicons-media-archive"></span>
-                    Minified file size: <strong>' . $this->format_file_size($min_size) . '</strong>
+                    Minified classes: <strong>' . $this->format_file_size($min_size) . '</strong>
                     (Original: ' . $this->format_file_size($orig_size) . ') - 
                     <strong>' . $percent . '% reduction</strong>
-                </p>';
-                
-                // Add storage location
-                $file_info_html .= '<p>
-                    <span class="dashicons dashicons-database"></span>
-                    CSS files stored in: <code>' . 
-                    esc_html(str_replace(ABSPATH, '', $paths['uploads_dir'])) . 
-                    '</code>
                 </p>';
             } else {
                 $file_info_html .= '<p>
@@ -925,6 +969,23 @@ class LZA_Class_Manager {
                     Minified file is not smaller than original. Using optimized version.
                 </p>';
             }
+            
+            // Add root variables file info if it exists
+            if (file_exists($root_vars_path) && $vars_size > 0) {
+                $file_info_html .= '<p>
+                    <span class="dashicons dashicons-admin-appearance"></span>
+                    Root variables: <strong>' . $this->format_file_size($vars_size) . '</strong> 
+                    <small>(kept separate for better performance)</small>
+                </p>';
+            }
+                
+            // Add storage location
+            $file_info_html .= '<p>
+                <span class="dashicons dashicons-database"></span>
+                CSS files stored in: <code>' . 
+                esc_html(str_replace(ABSPATH, '', $paths['uploads_dir'])) . 
+                '</code>
+            </p>';
         }
         ?>
         <div class="wrap">
