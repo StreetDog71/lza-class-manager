@@ -1,6 +1,9 @@
 <?php
 /**
  * Debug tools for the plugin
+ * 
+ * This file helps diagnose issues with WordPress CodeMirror integration.
+ * To use, add ?debug_lza=1 to your admin URL.
  */
 
 // Exit if accessed directly

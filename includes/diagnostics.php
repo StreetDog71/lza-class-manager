@@ -1,6 +1,9 @@
 <?php
 /**
- * Diagnostic functionality for the plugin
+ * Diagnostic functionality for the plugin\
+ * 
+ * This file helps diagnose issues with the code editor.
+ * Access it via: /wp-admin/tools.php?page=lza-class-manager&diagnostics=1
  */
 
 // Exit if accessed directly
