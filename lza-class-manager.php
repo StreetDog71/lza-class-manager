@@ -26,8 +26,8 @@ require_once LZA_CLASS_MANAGER_PATH . 'includes/class-lza-frontend.php';
 
 // Include diagnostic and debug tools in admin context
 if (is_admin()) {
-    require_once LZA_CLASS_MANAGER_PATH . 'includes/diagnostics.php';
-    require_once LZA_CLASS_MANAGER_PATH . 'includes/debug-tool.php';
+    require_once LZA_CLASS_MANAGER_PATH . 'diagnostics.php';
+    require_once LZA_CLASS_MANAGER_PATH . 'debug-tool.php';
 }
 
 /**
