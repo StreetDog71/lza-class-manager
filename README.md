@@ -6,6 +6,25 @@ A WordPress plugin for managing custom CSS classes in the Gutenberg block editor
 
 LZA Class Manager provides an intuitive interface for adding and managing CSS classes to blocks in the WordPress block editor (Gutenberg). The plugin allows you to create and edit custom CSS classes through a central admin panel, and then easily apply those classes to any block through a dedicated sidebar panel in the editor.
 
+## Use case
+
+Adding custom classes to Gutenberg blocks is a bit cumbersome. You need to open the Advanced tab and insert the class name manually. When you select a block, there's no easy way of telling if it has custom classes applied, forcing you to open the Advanced tab to confirm.
+
+This plugin allows you to do the following:
+
+- Add custom classes to blocks (without the need to open the Advanced tab)
+- See which classes are applied to a block (without the need to open the Advanced tab)
+- Remove classes applied to a block with a single click
+- Reorder the classes applied to a block
+- Get a list of classes from the plugin settings page, with auto-complete
+- Add your own list of variables and classes in the plugin settings page
+- Generate independent CSS files for the admin and frontend based on the classes added to the plugin settings page
+- Minify the frontend CSS file
+- Get the WordPress global variables in the plugin settings page
+- Insert any WordPress global variable in the code editor with a single click
+- Filter the list of WordPress global variables
+- Edit the CSS variables and classes with a code editor in the plugin settings page
+
 ## Features
 
 - **Custom CSS Editor**: Write and manage CSS classes in a dedicated admin interface with syntax highlighting
@@ -77,4 +96,13 @@ Example:
 
 ## Support & Development
 
-This plugin is maintained by Lazy Algorithm. For support requests, feature suggestions, or bug reports, please contact us or open an issue on the plugin repository.
+This plugin is maintained by Lazy Algorithm. For support requests, feature suggestions, or bug reports, please contact us at <a href="mailto:dev@lza.pt">dev@lza.pt</a> or open an issue on the plugin repository.
+
+## Considerations
+
+Most of this plugin was created with Claude Sonnet 3.7. I did my best to guide the AI through the process, but some parts of this plugin are a bit beyond my knowledge level.
+I'm sure there's a lot of room for improvement, and the early feedback from Sérgio and Nuno was a great push in the right direction. It still puzzles me why the admin.js file is using jQuery, but when I asked Claude AI about it the answer was:
+
+*While modern vanilla JavaScript could achieve the same functionality, using jQuery here aligns with WordPress development patterns for admin interfaces and leverages the already-loaded library that's part of the WordPress admin environment.*
+
+As it is, this plugin is already a great addition to my workflow. Having said that, I'm open to any suggestion to improve its functionalities or the code base. All suggestions and ideas are welcome. If you find this plugin as useful as I did, enjoy it!
