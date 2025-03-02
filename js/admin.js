@@ -4,6 +4,9 @@
 (function($) {
     'use strict';
     
+    // Store CodeMirror instance globally
+    var cmEditor;
+
     $(document).ready(function() {
         console.log('Admin JS loaded, initializing editor...');
         
@@ -32,8 +35,8 @@
         
         try {
             // Simple initialization
-            var editor = wp.codeEditor.initialize($textarea, lzaEditorSettings.settings);
-            var cm = editor.codemirror;
+            cmEditor = wp.codeEditor.initialize($textarea, lzaEditorSettings.settings);
+            var cm = cmEditor.codemirror;
             
             // Make CodeMirror instance available globally for the CSS variable sidebar
             window.lzaCodeMirror = cm;
