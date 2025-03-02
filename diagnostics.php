@@ -38,8 +38,6 @@ class LZA_Diagnostics {
             'Plugin Main File' => LZA_CLASS_MANAGER_PATH . 'lza-class-manager.php',
             'Admin JS' => LZA_CLASS_MANAGER_PATH . 'js/admin.js',
             'Admin CSS' => LZA_CLASS_MANAGER_PATH . 'css/admin-styles.css',
-            'Custom Classes CSS' => LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css',
-            'Editor Safe CSS' => LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css',
             'Theme: Dracula' => LZA_CLASS_MANAGER_PATH . 'css/themes/dracula.css'
         );
         

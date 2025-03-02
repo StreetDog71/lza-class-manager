@@ -16,8 +16,18 @@ class LZA_Admin {
      *
      * @param LZA_CSS_Processor $css_processor CSS processor instance
      */
-    public function __construct($css_processor) {
-        $this->css_processor = $css_processor;
+    public function __construct($css_processor = null) {
+        // Initialize CSS processor if not provided
+        if ($css_processor === null) {
+            $this->css_processor = new LZA_CSS_Processor();
+        } else {
+            $this->css_processor = $css_processor;
+        }
+        
+        // Debug information
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('LZA Class Manager Admin: Constructor called with CSS processor: ' . ($css_processor !== null ? 'yes' : 'no'));
+        }
     }
     
     /**
@@ -28,8 +38,9 @@ class LZA_Admin {
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         
-        // Register AJAX handler
+        // Register AJAX handlers
         add_action('wp_ajax_lza_save_editor_theme', array($this, 'save_editor_theme'));
+        add_action('wp_ajax_lza_save_css', array($this, 'ajax_save_css'));
     }
     
     /**
@@ -69,15 +80,37 @@ class LZA_Admin {
             return '';
         }
         
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('LZA Class Manager: sanitize_custom_css called with ' . strlen($input) . ' bytes of CSS');
+        }
+        
+        // Make sure we have a CSS processor instance
+        if (!$this->css_processor) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('LZA Class Manager: Creating new CSS processor in sanitize_custom_css');
+            }
+            $this->css_processor = new LZA_CSS_Processor();
+        }
+        
+        // Process and save CSS to files
         $result = $this->css_processor->process_css($input);
         
         if ($result === false) {
             add_settings_error(
                 'lza_custom_css',
                 'file_save_error',
-                'Failed to save CSS file. Check file permissions.',
+                'Failed to save CSS files. Check file permissions.',
                 'error'
             );
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('LZA Class Manager: Failed to save CSS files in sanitize_custom_css');
+            }
+        } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('LZA Class Manager: Successfully saved CSS files in sanitize_custom_css');
+            }
         }
         
         return $input;
@@ -227,6 +260,43 @@ class LZA_Admin {
     }
     
     /**
+     * AJAX handler to save CSS content
+     */
+    public function ajax_save_css() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Permission denied'));
+            return;
+        }
+        
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'lza-css-editor')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        $css = isset($_POST['css']) ? wp_unslash($_POST['css']) : '';
+        
+        // Save to option for backup
+        update_option('lza_custom_css', $css);
+        
+        // Make sure we have a CSS processor instance
+        if (!$this->css_processor) {
+            $this->css_processor = new LZA_CSS_Processor();
+        }
+        
+        // Process and save CSS to files
+        $result = $this->css_processor->process_css($css);
+        
+        if ($result) {
+            wp_send_json_success(array(
+                'message' => 'CSS saved successfully',
+                'file_info' => $this->css_processor->get_file_info_html()
+            ));
+        } else {
+            wp_send_json_error(array('message' => 'Failed to save CSS files'));
+        }
+    }
+    
+    /**
      * Get all CSS variables from theme.json
      */
     private function get_all_theme_json_css_variables() {
@@ -266,18 +336,22 @@ class LZA_Admin {
                 // Save to option for backup
                 update_option('lza_custom_css', $css_content);
                 
-                // Process and save CSS
+                // Process and save CSS - THIS IS THE KEY PART THAT SAVES FILES
                 $result = $this->css_processor->process_css($css_content);
                 
-                // Check for errors
-                $settings_errors = get_settings_errors('lza_custom_css');
-                if (empty($settings_errors)) {
+                if ($result) {
                     $paths = $this->css_processor->get_css_paths();
                     $relative_path = str_replace(ABSPATH, '', $paths['custom_css_path']);
                     $success_message = 'CSS saved successfully to: ' . $relative_path;
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('LZA Class Manager: CSS saved successfully in render_admin_page');
+                    }
                 } else {
-                    foreach ($settings_errors as $error) {
-                        $error_message = $error['message'];
+                    $error_message = 'Failed to save CSS files. Check file permissions.';
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('LZA Class Manager: Failed to save CSS files in render_admin_page');
                     }
                 }
             } else {
@@ -303,7 +377,7 @@ class LZA_Admin {
             <h1>LZA Class Manager</h1>
             <p>Edit your custom CSS classes below. These classes will be available in the LZA Class Manager panel in the block editor.</p>
             
-            <form method="post" action="">
+            <form method="post" action="" id="lza-css-form">
                 <?php wp_nonce_field('lza_save_css', 'lza_css_nonce'); ?>
                 <div class="lza-editor-layout">
                     <div class="lza-css-editor-container">
@@ -311,6 +385,7 @@ class LZA_Admin {
                             <h2>Custom Classes CSS</h2>
                             <div class="lza-editor-actions">
                                 <button type="submit" class="button button-primary">Save Changes</button>
+                                <span class="lza-save-status"></span>
                             </div>
                         </div>
                         <textarea id="lza_custom_css" name="lza_custom_css" rows="20" class="large-text code"><?php echo esc_textarea($css_content); ?></textarea>
@@ -337,7 +412,9 @@ class LZA_Admin {
                 <!-- File information panel -->
                 <div class="lza-file-info-panel">
                     <h3><span class="dashicons dashicons-info"></span> File Information</h3>
-                    <?php echo $file_info_html; ?>
+                    <div id="lza-file-info">
+                        <?php echo $file_info_html; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
             </form>

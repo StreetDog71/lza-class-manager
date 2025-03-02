@@ -3,6 +3,23 @@
  * CSS processing functionality
  */
 class LZA_CSS_Processor {
+    /**
+     * CSS file definitions - unified into a single property
+     */
+    private $css_files = array(
+        // Plugin source files and their destinations
+        'source_files' => array(
+            'custom' => array(
+                'source' => 'css/custom-classes.css',
+                'dest' => 'lza-css/custom-classes.css',
+                'dest_min' => 'lza-css/custom-classes.min.css'
+            ),
+            'editor' => array(
+                'source' => 'css/editor-safe-classes.css',
+                'dest' => 'lza-css/editor-safe-classes.css'
+            )
+        )
+    );
 
     /**
      * Get CSS file paths - central function to determine paths for all CSS files
@@ -39,13 +56,18 @@ class LZA_CSS_Processor {
     
     /**
      * Ensure CSS directories exist and are writable
+     * 
+     * @return bool Success status
      */
     public function ensure_css_directories() {
         $paths = $this->get_css_paths();
         
         // Create the uploads CSS directory if it doesn't exist
         if (!file_exists($paths['uploads_dir'])) {
-            wp_mkdir_p($paths['uploads_dir']);
+            if (!wp_mkdir_p($paths['uploads_dir'])) {
+                error_log('LZA Class Manager: Failed to create directory ' . $paths['uploads_dir']);
+                return false;
+            }
             
             // Add an index.php file for security
             file_put_contents(trailingslashit($paths['uploads_dir']) . 'index.php', "<?php\n// Silence is golden.");
@@ -54,40 +76,86 @@ class LZA_CSS_Processor {
         // Ensure the directory is writable
         if (!is_writable($paths['uploads_dir'])) {
             @chmod($paths['uploads_dir'], 0755);
+            
+            // Check if chmod worked
+            if (!is_writable($paths['uploads_dir'])) {
+                error_log('LZA Class Manager: Directory is not writable - ' . $paths['uploads_dir']);
+                return false;
+            }
         }
+        
+        return true;
     }
     
     /**
      * Check if we need to initialize the CSS files on plugin activation or new installation
+     * Creates files in upload directory based on plugin source files
+     * 
+     * @return bool Success status
      */
     public function maybe_initialize_css_files() {
         $paths = $this->get_css_paths();
         
-        // Check if custom CSS file exists in uploads
-        if (!file_exists($paths['custom_css_path'])) {
-            // Get default CSS content from plugin directory
-            $default_css = '';
-            if (file_exists($paths['plugin_custom_css'])) {
-                $default_css = file_get_contents($paths['plugin_custom_css']);
-            } else {
-                // If no plugin CSS file, use built-in default
-                $default_css = "/* Add your custom classes here */\n\n" .
-                               ".p-l {\n    padding: 1rem;\n}\n\n" .
-                               ".p-xl {\n    padding: 3rem;\n}\n\n" .
-                               ".bg-red {\n    background-color: red;\n}\n\n" .
-                               ".text-white {\n    color: white;\n}\n";
+        // Make sure the directory exists
+        if (!$this->ensure_css_directories()) {
+            error_log('LZA Class Manager: Failed to create CSS directory');
+            return false;
+        }
+        
+        $success = true;
+        
+        // Process the custom CSS file
+        if (file_exists($paths['plugin_custom_css'])) {
+            $css_content = file_get_contents($paths['plugin_custom_css']);
+            
+            // Extract root variables before creating any files
+            $root_vars = $this->extract_root_variables($css_content);
+            
+            // Save the main CSS file (including root vars)
+            if (!$this->create_file($paths['custom_css_path'], $css_content)) {
+                error_log('LZA Class Manager: Failed to create file ' . $paths['custom_css_path']);
+                $success = false;
             }
             
-            // Save to uploads directory
-            file_put_contents($paths['custom_css_path'], $default_css);
+            // Create minified version (WITHOUT root vars)
+            $css_without_root = $this->remove_root_variables($css_content);
+            $minified_css = $this->minify_css($css_without_root);
+            if (!$this->create_file($paths['custom_css_min_path'], $minified_css)) {
+                error_log('LZA Class Manager: Failed to create file ' . $paths['custom_css_min_path']);
+                $success = false;
+            }
             
-            // Create minified version
-            $minified_css = $this->minify_css($default_css);
-            file_put_contents($paths['custom_css_min_path'], $minified_css);
-            
-            // Generate editor-safe CSS
-            $this->generate_editor_safe_css($default_css);
+            // Save root variables to separate file if they exist
+            if (!empty($root_vars)) {
+                if (!$this->create_file($paths['root_vars_path'], $root_vars)) {
+                    error_log('LZA Class Manager: Failed to create file ' . $paths['root_vars_path']);
+                    $success = false;
+                }
+            }
+        } else {
+            error_log('LZA Class Manager: Source file not found - ' . $paths['plugin_custom_css']);
+            $success = false;
         }
+        
+        // Process the editor-safe CSS file
+        if (file_exists($paths['plugin_editor_css'])) {
+            $editor_css_content = file_get_contents($paths['plugin_editor_css']);
+            if (!$this->create_file($paths['editor_css_path'], $editor_css_content)) {
+                error_log('LZA Class Manager: Failed to create file ' . $paths['editor_css_path']);
+                $success = false;
+            }
+        } else {
+            // If no source editor CSS file exists, generate it from custom CSS
+            if (file_exists($paths['plugin_custom_css'])) {
+                $css_content = file_get_contents($paths['plugin_custom_css']);
+                $this->generate_editor_safe_css($css_content);
+            } else {
+                error_log('LZA Class Manager: Source editor file not found - ' . $paths['plugin_editor_css']);
+                $success = false;
+            }
+        }
+        
+        return $success;
     }
 
     /**
@@ -114,31 +182,26 @@ class LZA_CSS_Processor {
         
         // Extract root variables and save to separate file
         $root_vars = $this->extract_root_variables($input);
-        if (!empty($root_vars)) {
-            file_put_contents($root_vars_path, $root_vars);
-            
-            // Important: We no longer remove root variables from the main CSS file
-            // This ensures they're still visible in the editor and preserved in all files
-            $classes_only_css = $input;
-        } else {
-            $classes_only_css = $input;
-        }
         
-        // Save the complete CSS content to file (including root variables)
-        $result = file_put_contents($css_file_path, $classes_only_css);
+        // Save the complete CSS content to main file (including root variables)
+        $result = file_put_contents($css_file_path, $input);
         
         if ($result === false) {
             return false;
-        } 
+        }
         
-        // Create minified version for frontend (only for class styles, not root vars)
-        // We remove root vars from minification as they're handled separately
-        $classes_for_minify = preg_replace('/:root\s*{[^}]+}/s', '', $classes_only_css);
-        $minified_css = $this->minify_css($classes_for_minify);
+        // Save root variables to a separate file if they exist
+        if (!empty($root_vars)) {
+            file_put_contents($root_vars_path, $root_vars);
+        }
+        
+        // Create minified version for frontend (EXCLUDING root vars)
+        $css_without_root = $this->remove_root_variables($input);
+        $minified_css = $this->minify_css($css_without_root);
         file_put_contents($min_css_file_path, $minified_css);
         
-        // Generate editor-safe CSS after successful save (includes both vars and classes)
-        $this->generate_editor_safe_css($input);  // Use the full original input for editor CSS
+        // Generate editor-safe CSS after successful save
+        $this->generate_editor_safe_css($input);
         
         return true;
     }
@@ -179,9 +242,20 @@ class LZA_CSS_Processor {
     }
 
     /**
+     * Remove :root variables from CSS content
+     * 
+     * @param string $css_content Full CSS content
+     * @return string CSS content without root variables
+     */
+    public function remove_root_variables($css_content) {
+        // Remove :root block completely for minification
+        return preg_replace('/:root\s*{[^}]+}\s*/s', '', $css_content);
+    }
+
+    /**
      * Improved CSS Minification with better handling of CSS functions
      * 
-     * @param string $css The CSS to minify
+     * @param string $css The CSS to minify (already without :root variables)
      * @return string Minified CSS
      */
     public function minify_css($css) {
@@ -191,33 +265,40 @@ class LZA_CSS_Processor {
         // Remove comments
         $css = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $css);
         
-        // Temporary replace CSS functions like calc(), clamp(), etc. to protect their content
-        $placeholder_prefix = 'CSS_FUNCTION_PLACEHOLDER_';
-        $placeholder_count = 0;
-        $placeholders = array();
-        
-        // Match CSS functions: function_name(any content including spaces and nested parentheses)
-        $css = preg_replace_callback('/(?<function>calc|clamp|min|max|var)\((?<content>[^()]*(?:\([^()]*\)[^()]*)*)\)/i',
-            function ($matches) use (&$placeholder_count, &$placeholders, $placeholder_prefix) {
-                // Create a unique placeholder
-                $placeholder = $placeholder_prefix . $placeholder_count++;
-                // Store the full function with content
-                $placeholders[$placeholder] = $matches[0];
-                return $placeholder;
-            },
-            $css
+        // Create a function to protect CSS function expressions from minification
+        $functions_to_protect = array(
+            // CSS functions that should keep their internal spaces and structure
+            'var', 'calc', 'clamp', 'min', 'max', 'env', 
+            'cubic-bezier', 'linear-gradient', 'radial-gradient',
+            'repeating-linear-gradient', 'repeating-radial-gradient',
+            'conic-gradient', 'url'
         );
         
-        // Now proceed with regular minification (spaces are safe to remove)
+        // Replace function contents with placeholders before minification
+        $pattern = '/(' . implode('|', $functions_to_protect) . ')\s*\(\s*([^()]*(?:\([^()]*\)[^()]*)*)\s*\)/i';
+        $placeholders = array();
+        $placeholder_index = 0;
         
-        // Remove spaces after colons, semicolons, commas, brackets, etc.
+        $css = preg_replace_callback($pattern, function($matches) use (&$placeholders, &$placeholder_index) {
+            $function_name = $matches[1];
+            $function_content = $matches[2];
+            $full_function = $function_name . '(' . $function_content . ')';
+            
+            // Create a unique placeholder
+            $placeholder = "___FUNCTION_PLACEHOLDER_{$placeholder_index}___";
+            $placeholder_index++;
+            
+            // Store the mapping
+            $placeholders[$placeholder] = $full_function;
+            
+            return $placeholder;
+        }, $css);
+        
+        // Now proceed with normal minification since function contents are protected
+        
+        // Remove spaces around selectors, properties, and values
         $css = preg_replace('/\s*([\{\};:,>+~])\s*/', '$1', $css);
-        
-        // Remove unnecessary spaces that aren't next to operators
         $css = preg_replace('/\s+/', ' ', $css);
-        
-        // Remove all newlines, tabs
-        $css = str_replace(array("\r\n", "\r", "\n", "\t"), '', $css);
         
         // Remove spaces around brackets
         $css = str_replace('{ ', '{', $css);
@@ -237,28 +318,22 @@ class LZA_CSS_Processor {
         // Remove zero units
         $css = str_replace(array('0px', '0em', '0rem', '0%'), '0', $css);
         
-        // Replace multiple zeros
-        $css = preg_replace('/\s0 0 0 0;/', ':0;', $css);
-        $css = preg_replace('/\s0 0 0;/', ':0;', $css);
-        $css = preg_replace('/\s0 0;/', ':0;', $css);
-        
         // Replace hex colors with short notation when possible
         $css = preg_replace('/#([a-f0-9])\1([a-f0-9])\2([a-f0-9])\3/i', '#$1$2$3', $css);
         
-        // Now restore all the CSS function placeholders
+        // Restore all function placeholders
         foreach ($placeholders as $placeholder => $original) {
             $css = str_replace($placeholder, $original, $css);
         }
         
-        // Single line, ultra-compressed version
-        $minified_css = "/* Minified CSS */\n" . $css;
+        // Prepend a comment
+        $minified_css = "/* LZA Minified CSS - Root variables loaded separately */\n" . $css;
         
-        // Only use minified version if it's actually smaller than the original
+        // Only use the minified version if it's actually smaller
         if (strlen($minified_css) < $original_length) {
             return $minified_css;
         } else {
-            // If the minified version is larger or equal, just return the cleaned original
-            return "/* Optimized CSS */\n" . $css;
+            return "/* LZA Optimized CSS - Root variables loaded separately */\n" . $css;
         }
     }
 
@@ -552,5 +627,66 @@ class LZA_CSS_Processor {
         }
         
         return $file_info_html;
+    }
+
+    /**
+     * Creates a file with the given content
+     * 
+     * @param string $path File path
+     * @param string $content File content
+     * @return bool True on success, false on failure
+     */
+    private function create_file($path, $content) {
+        global $wp_filesystem;
+        
+        // Initialize the WP filesystem if needed
+        if (!$wp_filesystem) {
+            require_once ABSPATH . '/wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+        
+        // Try to use WP_Filesystem first
+        if ($wp_filesystem) {
+            return $wp_filesystem->put_contents($path, $content, FS_CHMOD_FILE);
+        } else {
+            // Fallback to direct PHP file operations
+            $file = @fopen($path, 'wb');
+            if ($file) {
+                $result = @fwrite($file, $content);
+                @fclose($file);
+                return $result !== false;
+            }
+            return false;
+        }
+    }
+    
+    /**
+     * Gets the URL for a CSS file
+     * 
+     * @param string $key The file key (main, utilities, components)
+     * @return string The URL to the CSS file
+     */
+    public function get_css_url($key) {
+        if (isset($this->css_files['legacy'][$key])) {
+            $upload_dir = wp_upload_dir();
+            return $upload_dir['baseurl'] . '/' . $this->css_files['legacy'][$key];
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Gets the filesystem path for a CSS file
+     * 
+     * @param string $key The file key (main, utilities, components)
+     * @return string The path to the CSS file
+     */
+    public function get_css_path($key) {
+        if (isset($this->css_files['legacy'][$key])) {
+            $upload_dir = wp_upload_dir();
+            return $upload_dir['basedir'] . '/' . $this->css_files['legacy'][$key];
+        }
+        
+        return '';
     }
 }

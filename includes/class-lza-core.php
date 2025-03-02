@@ -1,9 +1,10 @@
 <?php
 /**
- * Core class that initializes and coordinates all other components
+ * Core class for LZA Class Manager
+ * 
+ * Responsible for initializing and coordinating all plugin components
  */
 class LZA_Core {
-    
     /**
      * CSS Processor instance
      *
@@ -12,38 +13,42 @@ class LZA_Core {
     private $css_processor;
     
     /**
-     * Admin interface instance
+     * Admin instance
      *
      * @var LZA_Admin
      */
     private $admin;
     
     /**
-     * Editor integration instance
+     * Editor instance
      *
      * @var LZA_Editor
      */
     private $editor;
     
     /**
-     * Frontend styles instance
+     * Frontend instance
      *
      * @var LZA_Frontend
      */
     private $frontend;
-
+    
     /**
-     * Initialize the plugin core
+     * Initialize the plugin components
      */
     public function init() {
-        // Create component instances
+        // Initialize CSS processor first
         $this->css_processor = new LZA_CSS_Processor();
+        
+        // Initialize other components and pass the CSS processor
         $this->admin = new LZA_Admin($this->css_processor);
         $this->editor = new LZA_Editor($this->css_processor);
         $this->frontend = new LZA_Frontend($this->css_processor);
-
-        // Set up core hooks
-        add_action('init', array($this, 'setup'));
+        
+        // Initialize each component
+        $this->admin->init();
+        $this->editor->init();
+        $this->frontend->init();
     }
 
     /**

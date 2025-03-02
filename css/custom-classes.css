@@ -1,0 +1,51 @@
+:root {
+    --space-4xs: clamp(0.33rem, calc(-0.03vw + 0.33rem), 0.31rem);
+    --space-3xs: clamp(0.41rem, calc(0.04vw + 0.4rem), 0.44rem);
+    --space-2xs: clamp(0.51rem, calc(0.16vw + 0.48rem), 0.62rem);
+    --space-xs: clamp(0.64rem, calc(0.35vw + 0.57rem), 0.88rem);
+    --space-s: clamp(0.8rem, calc(0.65vw + 0.67rem), 1.24rem);
+    --space-m: clamp(1rem, calc(1.11vw + 0.78rem), 1.75rem);
+    --space-l: clamp(1.25rem, calc(1.81vw + 0.89rem), 2.47rem);
+    --space-xl: clamp(1.56rem, calc(2.87vw + 0.99rem), 3.5rem);
+    --space-2xl: clamp(1.95rem, calc(4.44vw + 1.07rem), 4.95rem);
+    --space-3xl: clamp(2.44rem, calc(6.75vw + 1.09rem), 7rem);
+    --space-4xl: clamp(3.05rem, calc(10.13vw + 1.02rem), 9.89rem);
+}
+
+.p-s { padding: 0.25rem; }
+.p-m { padding: 0.5rem; }
+.p-l { padding: var(--wp--preset--spacing--30); }
+.p-xl { padding: var(--wp--preset--spacing--80); }
+.px-xl { padding-inline: var(--wp--preset--spacing--80); }
+
+.bg-red { background-color: red; }
+
+.text-center { text-align: center; }
+
+.flex, .is-layout-flex { display: flex; }
+
+.flex-1 { flex: 1; }
+
+.grid, .is-layout-grid { display: grid; }
+.grid-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.gap-10 { gap: 10px; }
+.gap-20 { gap: 20px; }
+.gap-30 { gap: 30px; }
+.gap-40 { gap: var(--wp--preset--spacing--40) }
+
+.text-white { color: #ffffff; }
+
+/* Media queries */
+@media (max-width: 1024px) {
+    .m-p-l { padding: 2rem; }
+	.m-gap-20 { gap: 20px; }
+}
+
+@media (max-width: 768px) {
+    .s-p-m { padding: 1rem; }
+	.s-gap-10 { gap: 10px; }
+}

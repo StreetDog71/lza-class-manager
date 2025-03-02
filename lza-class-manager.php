@@ -49,7 +49,37 @@ register_activation_hook(__FILE__, 'lza_class_manager_activate');
  * Plugin activation hook
  */
 function lza_class_manager_activate() {
-    // Initialize CSS processor and ensure initial files are created
+    // Initialize CSS processor to generate required CSS files
     $css_processor = new LZA_CSS_Processor();
-    $css_processor->maybe_initialize_css_files();
+    
+    // Create the directory structure and generate CSS files
+    $files_created = $css_processor->maybe_initialize_css_files();
+    
+    if (!$files_created) {
+        error_log('LZA Class Manager: Failed to create one or more CSS files');
+        
+        // Add admin notice for file creation failures
+        add_option('lza_css_file_creation_failed', true);
+        add_action('admin_notices', 'lza_css_file_creation_notice');
+    }
+    
+    // Clear any cached styles
+    delete_transient('lza_cached_css');
+    
+    // Flush rewrite rules if needed
+    flush_rewrite_rules();
+}
+
+/**
+ * Admin notice for CSS file creation failures
+ */
+function lza_css_file_creation_notice() {
+    if (get_option('lza_css_file_creation_failed')) {
+        echo '<div class="notice notice-error is-dismissible">';
+        echo '<p>' . esc_html__('LZA Class Manager: Failed to create one or more CSS files. Please check file permissions in your uploads directory.', 'lza-class-manager') . '</p>';
+        echo '</div>';
+        
+        // Remove the option so the notice only appears once
+        delete_option('lza_css_file_creation_failed');
+    }
 }
