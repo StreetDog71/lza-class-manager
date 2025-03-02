@@ -31,7 +31,10 @@ class LZA_Class_Manager {
         // Frontend hooks - only load custom classes
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_styles'));
         
-        // Editor hooks - only load editor-safe classes in the editor
+        // Proper way to add styles that will be included in the iframe
+        add_action('enqueue_block_assets', array($this, 'enqueue_block_editor_styles'));
+        
+        // Editor hooks - load React components
         add_action('enqueue_block_editor_assets', array($this, 'enqueue_editor_assets'));
         
         // Admin hooks
@@ -41,64 +44,233 @@ class LZA_Class_Manager {
         
         // Register AJAX handler
         add_action('wp_ajax_lza_save_editor_theme', array($this, 'save_editor_theme'));
+        
+        // Make sure the CSS directories exist on plugin activation or settings save
+        $this->ensure_css_directories();
+        
+        // Check if we need to initialize default CSS files
+        add_action('admin_init', array($this, 'maybe_initialize_css_files'));
+    }
+
+    /**
+     * Get CSS file paths - central function to determine paths for all CSS files
+     *
+     * @return array Array of CSS file paths and URLs
+     */
+    private function get_css_paths() {
+        // Get WordPress uploads directory info
+        $upload_dir = wp_upload_dir();
+        
+        // Define the plugin's CSS folder in uploads
+        $css_folder = 'lza-css';
+        
+        // Create the paths
+        $uploads_path = trailingslashit($upload_dir['basedir']) . $css_folder;
+        $uploads_url = trailingslashit($upload_dir['baseurl']) . $css_folder;
+        
+        // Return array of all important paths and URLs
+        return array(
+            'uploads_dir' => $uploads_path,
+            'uploads_url' => $uploads_url,
+            'custom_css_path' => trailingslashit($uploads_path) . 'custom-classes.css',
+            'custom_css_url' => trailingslashit($uploads_url) . 'custom-classes.css',
+            'custom_css_min_path' => trailingslashit($uploads_path) . 'custom-classes.min.css',
+            'custom_css_min_url' => trailingslashit($uploads_url) . 'custom-classes.min.css',
+            'editor_css_path' => trailingslashit($uploads_path) . 'editor-safe-classes.css',
+            'editor_css_url' => trailingslashit($uploads_url) . 'editor-safe-classes.css',
+            'plugin_custom_css' => LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css',
+            'plugin_editor_css' => LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css',
+        );
+    }
+    
+    /**
+     * Ensure CSS directories exist and are writable
+     */
+    private function ensure_css_directories() {
+        $paths = $this->get_css_paths();
+        
+        // Create the uploads CSS directory if it doesn't exist
+        if (!file_exists($paths['uploads_dir'])) {
+            wp_mkdir_p($paths['uploads_dir']);
+            
+            // Add an index.php file for security
+            file_put_contents(trailingslashit($paths['uploads_dir']) . 'index.php', "<?php\n// Silence is golden.");
+        }
+        
+        // Ensure the directory is writable
+        if (!is_writable($paths['uploads_dir'])) {
+            @chmod($paths['uploads_dir'], 0755);
+        }
+    }
+    
+    /**
+     * Check if we need to initialize the CSS files on plugin activation or new installation
+     */
+    public function maybe_initialize_css_files() {
+        $paths = $this->get_css_paths();
+        
+        // Check if custom CSS file exists in uploads
+        if (!file_exists($paths['custom_css_path'])) {
+            // Get default CSS content from plugin directory
+            $default_css = '';
+            if (file_exists($paths['plugin_custom_css'])) {
+                $default_css = file_get_contents($paths['plugin_custom_css']);
+            } else {
+                // If no plugin CSS file, use built-in default
+                $default_css = "/* Add your custom classes here */\n\n" .
+                               ".p-l {\n    padding: 1rem;\n}\n\n" .
+                               ".p-xl {\n    padding: 3rem;\n}\n\n" .
+                               ".bg-red {\n    background-color: red;\n}\n\n" .
+                               ".text-white {\n    color: white;\n}\n";
+            }
+            
+            // Save to uploads directory
+            file_put_contents($paths['custom_css_path'], $default_css);
+            
+            // Create minified version
+            $minified_css = $this->minify_css($default_css);
+            file_put_contents($paths['custom_css_min_path'], $minified_css);
+            
+            // Generate editor-safe CSS
+            $this->generate_editor_safe_css($default_css);
+        }
     }
 
     /**
      * Enqueue frontend styles
      */
     public function enqueue_frontend_styles() {
+        $paths = $this->get_css_paths();
+        
         // Check if minified version exists and use it for better performance
-        if (file_exists(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css')) {
+        if (file_exists($paths['custom_css_min_path'])) {
             wp_enqueue_style(
                 'lza-custom-classes',
-                LZA_CLASS_MANAGER_URL . 'css/custom-classes.min.css',
+                $paths['custom_css_min_url'],
                 array(),
-                filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css')
+                filemtime($paths['custom_css_min_path'])
+            );
+        } elseif (file_exists($paths['custom_css_path'])) {
+            // Fall back to the non-minified version in uploads
+            wp_enqueue_style(
+                'lza-custom-classes',
+                $paths['custom_css_url'],
+                array(),
+                filemtime($paths['custom_css_path'])
             );
         } else {
-            // Fall back to the regular version if minified doesn't exist
+            // Last resort - use plugin directory file
             wp_enqueue_style(
                 'lza-custom-classes',
                 LZA_CLASS_MANAGER_URL . 'css/custom-classes.css',
                 array(),
-                filemtime(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css')
+                LZA_CLASS_MANAGER_VERSION
             );
         }
     }
 
     /**
-     * Enqueue editor assets
+     * Enqueue styles that need to be included in the editor iframe
+     * This uses the enqueue_block_assets hook which ensures styles are added to the iframe
      */
-    public function enqueue_editor_assets() {
-        // In the editor, only load the editor-safe classes (non-minified version)
-        $editor_css_path = LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css';
-        
-        if (file_exists($editor_css_path)) {
-            wp_enqueue_style(
-                'lza-editor-safe-classes',
-                LZA_CLASS_MANAGER_URL . 'css/editor-safe-classes.css',
-                array(),
-                filemtime($editor_css_path)
-            );
+    public function enqueue_block_editor_styles() {
+        // Only load in editor context
+        if (!is_admin()) {
+            return;
         }
         
-        // Editor-only scripts
-        $asset_file = include(LZA_CLASS_MANAGER_PATH . 'build/index.asset.php');
+        $paths = $this->get_css_paths();
         
-        // Enqueue plugin UI styles
+        // First check if editor-safe CSS exists in uploads
+        if (file_exists($paths['editor_css_path'])) {
+            // Use wp_add_inline_style with a dependency on 'wp-block-editor' to ensure it's included in the iframe
+            wp_enqueue_style(
+                'wp-block-editor'
+            );
+            
+            // Load the stylesheet content and add it inline
+            $editor_css_content = file_get_contents($paths['editor_css_path']);
+            if ($editor_css_content) {
+                wp_add_inline_style('wp-block-editor', $editor_css_content);
+            }
+        } elseif (file_exists($paths['plugin_editor_css'])) {
+            // Fall back to plugin directory
+            $editor_css_content = file_get_contents($paths['plugin_editor_css']);
+            if ($editor_css_content) {
+                wp_enqueue_style('wp-block-editor');
+                wp_add_inline_style('wp-block-editor', $editor_css_content);
+            }
+        }
+    }
+
+    /**
+     * Enqueue editor assets (React components only)
+     */
+    public function enqueue_editor_assets() {
+        $paths = $this->get_css_paths();
+        
+        // Make sure WordPress loads all plugin-related scripts that our panel depends on
+        wp_enqueue_script('wp-plugins');
+        wp_enqueue_script('wp-edit-post');
+        wp_enqueue_script('wp-element');
+        wp_enqueue_script('wp-components');
+        wp_enqueue_script('wp-block-editor');
+        wp_enqueue_script('wp-hooks');
+        wp_enqueue_script('wp-compose');
+        wp_enqueue_script('wp-data');
+        
+        // Debug built file existence 
+        $asset_file_path = LZA_CLASS_MANAGER_PATH . 'build/index.asset.php';
+        $js_file_path = LZA_CLASS_MANAGER_PATH . 'build/index.js';
+        
+        if (!file_exists($asset_file_path)) {
+            error_log('LZA Class Manager: Missing build/index.asset.php file');
+            return;
+        }
+        
+        if (!file_exists($js_file_path)) {
+            error_log('LZA Class Manager: Missing build/index.js file');
+            return;
+        }
+        
+        // Load the build files from the React app 
+        $asset_file = include($asset_file_path);
+        
+        // Add debugging info
+        error_log('LZA Class Manager: Loading JS from ' . $js_file_path);
+        error_log('LZA Class Manager: Dependencies ' . json_encode($asset_file['dependencies']));
+        
+        // Make sure all dependencies are included
+        $dependencies = array_merge(
+            $asset_file['dependencies'],
+            array(
+                'wp-plugins',
+                'wp-element',
+                'wp-blocks',
+                'wp-components',
+                'wp-editor',
+                'wp-block-editor',
+                'wp-hooks',
+                'wp-compose',
+                'wp-data'
+            )
+        );
+        
+        // Enqueue React app and dependencies
+        wp_enqueue_script(
+            'lza-class-manager',
+            LZA_CLASS_MANAGER_URL . 'build/index.js',
+            $dependencies,
+            $asset_file['version'] . '-' . time(), // Force no-cache during development
+            true
+        );
+        
+        // Enqueue plugin UI styles (these don't need to be in iframe)
         wp_enqueue_style(
             'lza-plugin-styles',
             LZA_CLASS_MANAGER_URL . 'css/plugin-styles.css',
             array(),
             filemtime(LZA_CLASS_MANAGER_PATH . 'css/plugin-styles.css')
-        );
-        
-        wp_enqueue_script(
-            'lza-class-manager',
-            LZA_CLASS_MANAGER_URL . 'build/index.js',
-            $asset_file['dependencies'],
-            $asset_file['version'],
-            true
         );
 
         // Pass CSS classes to JavaScript
@@ -109,28 +281,33 @@ class LZA_Class_Manager {
      * Parse CSS file and pass class names to JavaScript
      */
     private function localize_class_data() {
-        $css_content = file_get_contents(LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css');
-        $class_names = array();
+        $paths = $this->get_css_paths();
+        $css_file = file_exists($paths['custom_css_path']) ? $paths['custom_css_path'] : $paths['plugin_custom_css'];
         
-        // Extract classes with a better regex
-        if (preg_match_all('/\.([a-zA-Z0-9\-_]+)(?:\s*\{|\s*,|\s*\.)/', $css_content, $matches)) {
-            // Clean up and filter class names
-            if (isset($matches[1]) && is_array($matches[1])) {
-                $class_names = array_values(array_unique(array_filter($matches[1], function($name) {
-                    return !empty($name) && is_string($name);
-                })));
+        if (file_exists($css_file)) {
+            $css_content = file_get_contents($css_file);
+            $class_names = array();
+            
+            // Extract classes with a better regex
+            if (preg_match_all('/\.([a-zA-Z0-9\-_]+)(?:\s*\{|\s*,|\s*\.)/', $css_content, $matches)) {
+                // Clean up and filter class names
+                if (isset($matches[1]) && is_array($matches[1])) {
+                    $class_names = array_values(array_unique(array_filter($matches[1], function($name) {
+                        return !empty($name) && is_string($name);
+                    })));
+                }
             }
+            
+            // Debug info
+            if (is_admin() && WP_DEBUG) {
+                error_log('LZA Class Manager - Available classes: ' . json_encode($class_names));
+            }
+            
+            wp_localize_script('lza-class-manager', 'lzaClassManager', array(
+                'availableClasses' => $class_names,
+                'showSuggestions' => false
+            ));
         }
-        
-        // Debug info
-        if (is_admin() && WP_DEBUG) {
-            error_log('LZA Class Manager - Available classes: ' . json_encode($class_names));
-        }
-        
-        wp_localize_script('lza-class-manager', 'lzaClassManager', array(
-            'availableClasses' => $class_names,
-            'showSuggestions' => false
-        ));
     }
     
     /**
@@ -171,29 +348,22 @@ class LZA_Class_Manager {
         }
         
         // Get the file paths
-        $css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css';
-        $min_css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css';
+        $paths = $this->get_css_paths();
+        $css_file_path = $paths['custom_css_path'];
+        $min_css_file_path = $paths['custom_css_min_path'];
         
         // Ensure the css directory exists
-        $css_dir = dirname($css_file_path);
-        if (!file_exists($css_dir)) {
-            wp_mkdir_p($css_dir);
-        }
+        $this->ensure_css_directories();
         
         // Make sure the file is writable
-        if (!is_writable($css_file_path) && file_exists($css_file_path)) {
-            // Try to make it writable
-            @chmod($css_file_path, 0664);
-            
-            if (!is_writable($css_file_path)) {
-                add_settings_error(
-                    'lza_custom_css',
-                    'file_permission_error',
-                    'Could not save to CSS file. Check file permissions.',
-                    'error'
-                );
-                return $input;
-            }
+        if (!is_writable(dirname($css_file_path))) {
+            add_settings_error(
+                'lza_custom_css',
+                'file_permission_error',
+                'Could not save to CSS file. Uploads directory is not writable.',
+                'error'
+            );
+            return $input;
         }
         
         // Save the original CSS content to file
@@ -280,91 +450,198 @@ class LZA_Class_Manager {
 
     /**
      * Generate editor-safe CSS from the custom CSS
+     * Fix handling of media queries to properly include nested classes
      */
     private function generate_editor_safe_css($css_content) {
-        // File path for the editor-safe CSS
-        $editor_css_path = LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.css';
+        $paths = $this->get_css_paths();
+        $editor_css_path = $paths['editor_css_path'];
         
         // Start with a clean slate
         $editor_css = "/* Editor-safe classes - Generated automatically */\n\n";
         
-        // Extract class names and rules
-        if (preg_match_all('/\.([a-zA-Z0-9_-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_-]+))*\s*{([^}]+)}/', $css_content, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                // Get the class name and rules
-                $class_name = $match[1];
-                $rules = $match[2];
-                
-                // Simply wrap with editor selectors, preserving the original rules exactly
-                $editor_css .= ".editor-styles-wrapper .{$class_name},\n";
-                $editor_css .= ".block-editor-block-list__block.{$class_name} {\n";
-                $editor_css .= $rules; // Keep the rules exactly as they are
-                $editor_css .= "}\n\n";
-            }
-        }
+        // Process regular classes first (outside media queries)
+        $standard_classes = $this->extract_regular_classes($css_content);
+        $editor_css .= $standard_classes;
         
-        // Handle media queries
-        if (preg_match_all('/@media[^{]+{([^}]+)}/', $css_content, $media_matches)) {
-            foreach ($media_matches[0] as $index => $media_query) {
-                $media_content = $media_matches[1][$index];
-                
-                // Extract the media query condition
-                preg_match('/@media([^{]+){/', $media_query, $condition_match);
-                $condition = trim($condition_match[1]);
-                
-                // Start new media query block
-                $editor_css .= "@media {$condition} {\n";
-                
-                // Find all class rules inside this media query
-                if (preg_match_all('/\.([a-zA-Z0-9_-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_-]+))*\s*{([^}]+)}/', $media_content, $inner_matches, PREG_SET_ORDER)) {
-                    foreach ($inner_matches as $inner_match) {
-                        $class_name = $inner_match[1];
-                        $rules = $inner_match[2];
-                        
-                        // Editor-safe selectors for classes in media query
-                        $editor_css .= "  .editor-styles-wrapper .{$class_name},\n";
-                        $editor_css .= "  .block-editor-block-list__block.{$class_name} {\n";
-                        $editor_css .= $rules;
-                        $editor_css .= "  }\n\n";
-                    }
-                }
-                
-                // Close the media query
-                $editor_css .= "}\n\n";
-            }
-        }
+        // Process media queries with their nested classes
+        $media_query_css = $this->extract_media_query_classes($css_content);
+        $editor_css .= $media_query_css;
         
         // Write the generated CSS to file
         file_put_contents($editor_css_path, $editor_css);
         
-        // Remove any minified version if it exists to ensure it's not used
-        $min_editor_css_path = LZA_CLASS_MANAGER_PATH . 'css/editor-safe-classes.min.css';
-        if (file_exists($min_editor_css_path)) {
-            @unlink($min_editor_css_path);
-        }
-        
         // Log completion if in debug mode
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('LZA Class Manager: Generated editor-safe CSS');
-        }
-        
-        // Force update of style version in the editor if it's being used
-        if (wp_style_is('lza-editor-safe-classes', 'enqueued')) {
-            $version = filemtime($editor_css_path);
-            wp_styles()->registered['lza-editor-safe-classes']->ver = $version;
+            error_log('LZA Class Manager: Generated editor-safe CSS in uploads directory');
+            
+            // Debug log the generated CSS content
+            error_log('Editor CSS content: ' . substr($editor_css, 0, 500) . '...');
         }
         
         return true;
     }
     
     /**
+     * Extract regular classes (not in media queries)
+     * 
+     * @param string $css_content Full CSS content
+     * @return string Editor-safe CSS for regular classes
+     */
+    private function extract_regular_classes($css_content) {
+        $output = '';
+        
+        // First, remove all media queries to avoid duplicates
+        $css_without_media = preg_replace('/@media[^{]*\{[^}]*\}[^}]*\}/s', '', $css_content);
+        
+        // Now extract all remaining class selectors and their rules
+        if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s', $css_without_media, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                if (isset($match[1]) && isset($match[2])) {
+                    $class_name = $match[1];
+                    $rules = $match[2];
+                    
+                    // Simply wrap with editor selectors, preserving the original rules
+                    $output .= ".editor-styles-wrapper .{$class_name},\n";
+                    $output .= ".block-editor-block-list__block.{$class_name} {\n";
+                    $output .= $rules; // Keep the rules exactly as they are
+                    $output .= "}\n\n";
+                }
+            }
+        }
+        
+        return $output;
+    }
+    
+    /**
+     * Extract classes from media queries
+     * 
+     * @param string $css_content Full CSS content
+     * @return string Editor-safe CSS for media query classes
+     */
+    private function extract_media_query_classes($css_content) {
+        $output = '';
+        
+        // Define a more robust pattern for matching media queries
+        $pattern = '#@media\s+([^{]+)\s*{\s*((?:[^{}]|(?R))*)\s*}#s';
+        
+        if (!preg_match_all($pattern, $css_content, $media_matches, PREG_SET_ORDER)) {
+            // If the complex pattern fails, try a simpler approach
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('LZA Class Manager: Complex media query regex failed, trying simpler approach');
+            }
+            
+            // Fallback to simple extraction using string functions
+            preg_match_all('/@media[^{]*{/i', $css_content, $media_starts);
+            
+            if (!empty($media_starts[0])) {
+                foreach ($media_starts[0] as $media_start) {
+                    $start_pos = strpos($css_content, $media_start);
+                    if ($start_pos === false) continue;
+                    
+                    $brace_count = 1;
+                    $end_pos = $start_pos + strlen($media_start);
+                    $max_pos = strlen($css_content);
+                    
+                    // Find the end of this media query by matching braces
+                    while ($brace_count > 0 && $end_pos < $max_pos) {
+                        $char = $css_content[$end_pos];
+                        if ($char === '{') $brace_count++;
+                        if ($char === '}') $brace_count--;
+                        $end_pos++;
+                    }
+                    
+                    if ($brace_count === 0) {
+                        // Extract the complete media query
+                        $media_query = substr($css_content, $start_pos, $end_pos - $start_pos);
+                        
+                        // Extract the condition part
+                        $condition = trim(substr($media_start, 6, -1)); // Remove "@media" and "{"
+                        
+                        // Extract the content part (everything between the outer braces)
+                        $content_start = strpos($media_query, '{') + 1;
+                        $content_length = strrpos($media_query, '}') - $content_start;
+                        $media_content = substr($media_query, $content_start, $content_length);
+                        
+                        // Start new media query block
+                        $output .= "@media {$condition} {\n";
+                        
+                        // Extract and transform class rules inside this media query
+                        if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s', 
+                                         $media_content, $inner_matches, PREG_SET_ORDER)) {
+                            foreach ($inner_matches as $inner_match) {
+                                if (isset($inner_match[1]) && isset($inner_match[2])) {
+                                    $class_name = $inner_match[1];
+                                    $rules = $inner_match[2];
+                                    
+                                    // Editor-safe selectors for classes in media query
+                                    $output .= "  .editor-styles-wrapper .{$class_name},\n";
+                                    $output .= "  .block-editor-block-list__block.{$class_name} {\n";
+                                    $output .= $rules; // Fixed: Actually output the rules
+                                    $output .= "  }\n\n";
+                                }
+                            }
+                        }
+                        
+                        // Close the media query
+                        $output .= "}\n\n";
+                    }
+                }
+            }
+        } else {
+            // Process matches from the complex regex pattern
+            foreach ($media_matches as $media_match) {
+                if (isset($media_match[1]) && isset($media_match[2])) {
+                    $media_condition = trim($media_match[1]);
+                    $media_content = $media_match[2];
+                    
+                    // Start new media query block
+                    $output .= "@media {$media_condition} {\n";
+                    
+                    // Extract all class rules inside this media query
+                    if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s', 
+                                     $media_content, $inner_matches, PREG_SET_ORDER)) {
+                        foreach ($inner_matches as $inner_match) {
+                            if (isset($inner_match[1]) && isset($inner_match[2])) {
+                                $class_name = $inner_match[1];
+                                $rules = $inner_match[2];
+                                
+                                // Editor-safe selectors for classes in media query
+                                $output .= "  .editor-styles-wrapper .{$class_name},\n";
+                                $output .= "  .block-editor-block-list__block.{$class_name} {\n";
+                                $output .= $rules;
+                                $output .= "  }\n\n";
+                            }
+                        }
+                    }
+                    
+                    // Close the media query
+                    $output .= "}\n\n";
+                }
+            }
+        }
+        
+        // If we still don't have any output, try a direct string extraction as a last resort
+        if (empty($output)) {
+            // ...existing fallback code...
+        }
+        
+        return $output;
+    }
+    
+    /**
      * Get default CSS content
      */
     private function get_default_css() {
-        $css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css';
+        $paths = $this->get_css_paths();
         
-        if (file_exists($css_file_path)) {
-            return file_get_contents($css_file_path);
+        // First check in uploads directory
+        if (file_exists($paths['custom_css_path'])) {
+            return file_get_contents($paths['custom_css_path']);
+        }
+        
+        // Then check in plugin directory
+        if (file_exists($paths['plugin_custom_css'])) {
+            return file_get_contents($paths['plugin_custom_css']);
         }
         
         // Default content focuses only on classes, not selectors
@@ -564,7 +841,9 @@ class LZA_Class_Manager {
                 // Check for errors
                 $settings_errors = get_settings_errors('lza_custom_css');
                 if (empty($settings_errors)) {
-                    $success_message = 'CSS saved successfully to file: css/custom-classes.css';
+                    $paths = $this->get_css_paths();
+                    $relative_path = str_replace(ABSPATH, '', $paths['custom_css_path']);
+                    $success_message = 'CSS saved successfully to: ' . $relative_path;
                 } else {
                     foreach ($settings_errors as $error) {
                         $error_message = $error['message'];
@@ -586,9 +865,11 @@ class LZA_Class_Manager {
         // Get CSS variables from theme.json
         $css_variables = $this->get_all_theme_json_css_variables();
         
-        // Check if minified file exists and its size
-        $min_css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.min.css';
-        $css_file_path = LZA_CLASS_MANAGER_PATH . 'css/custom-classes.css';
+        // Get file info - we'll use this later
+        $paths = $this->get_css_paths();
+        $min_css_file_path = $paths['custom_css_min_path'];
+        $css_file_path = $paths['custom_css_path'];
+        $file_info_html = '';
         
         if (file_exists($min_css_file_path) && file_exists($css_file_path)) {
             $min_size = filesize($min_css_file_path);
@@ -597,28 +878,32 @@ class LZA_Class_Manager {
             $percent = ($orig_size > 0) ? round(($savings / $orig_size) * 100, 1) : 0;
             
             if ($min_size < $orig_size) {
-                echo '<p class="lza-minify-info">
+                $file_info_html .= '<p>
+                    <span class="dashicons dashicons-media-archive"></span>
                     Minified file size: <strong>' . $this->format_file_size($min_size) . '</strong>
                     (Original: ' . $this->format_file_size($orig_size) . ') - 
                     <strong>' . $percent . '% reduction</strong>
                 </p>';
+                
+                // Add storage location
+                $file_info_html .= '<p>
+                    <span class="dashicons dashicons-database"></span>
+                    CSS files stored in: <code>' . 
+                    esc_html(str_replace(ABSPATH, '', $paths['uploads_dir'])) . 
+                    '</code>
+                </p>';
             } else {
-                echo '<p class="lza-minify-info" style="border-left-color:#dc3545;">
+                $file_info_html .= '<p>
+                    <span class="dashicons dashicons-warning"></span>
                     Minified file is not smaller than original. Using optimized version.
                 </p>';
             }
         }
-        
         ?>
         <div class="wrap">
             <h1>LZA Class Manager</h1>
             <p>Edit your custom CSS classes below. These classes will be available in the LZA Class Manager panel in the block editor.</p>
-            <?php if (file_exists($min_css_file_path)): ?>
-            <p class="lza-minify-info">
-                Minified file size: <strong><?php echo esc_html($min_size); ?></strong> 
-                (Original: <?php echo esc_html($orig_size); ?>)
-            </p>
-            <?php endif; ?>
+            
             <form method="post" action="">
                 <?php wp_nonce_field('lza_save_css', 'lza_css_nonce'); ?>
                 <div class="lza-editor-layout">
@@ -648,6 +933,14 @@ class LZA_Class_Manager {
                     </div>
                     <?php endif; ?>
                 </div>
+                
+                <?php if (!empty($file_info_html)): ?>
+                <!-- File information panel -->
+                <div class="lza-file-info-panel">
+                    <h3><span class="dashicons dashicons-info"></span> File Information</h3>
+                    <?php echo $file_info_html; ?>
+                </div>
+                <?php endif; ?>
             </form>
         </div>
         
@@ -825,4 +1118,7 @@ class LZA_Class_Manager {
 }
 
 // Initialize the plugin
-new LZA_Class_Manager();
+$lza_class_manager = new LZA_Class_Manager();
+
+// Run setup on activation
+register_activation_hook(__FILE__, array($lza_class_manager, 'maybe_initialize_css_files'));

@@ -207,3 +207,51 @@ class LZA_Diagnostics {
 
 // Hook into plugin init
 add_action('admin_init', array('LZA_Diagnostics', 'run'));
+
+/**
+ * Add diagnostics to footer
+ */
+function lza_class_manager_diagnostics() {
+    // Only run in admin and when debug is on
+    if (!is_admin() || !defined('WP_DEBUG') || !WP_DEBUG) {
+        return;
+    }
+    
+    ?>
+    <script>
+    // Log Gutenberg environment details
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('LZA Class Manager Diagnostics:');
+        
+        // Check if we're in the block editor
+        if (typeof wp === 'undefined') {
+            console.log('- WordPress JS API not found');
+            return;
+        }
+        
+        // Check required JS modules
+        const modules = [
+            'blockEditor', 'blocks', 'components', 'compose', 
+            'data', 'element', 'hooks', 'i18n', 'plugins'
+        ];
+        
+        modules.forEach(module => {
+            console.log(`- wp.${module}: ${typeof wp[module] !== 'undefined' ? 'Available ✅' : 'Missing ❌'}`);
+        });
+        
+        // Check if our plugin is loaded
+        console.log(`- lzaClassManager global: ${typeof window.lzaClassManager !== 'undefined' ? 'Available ✅' : 'Missing ❌'}`);
+        
+        // Check for specific hooks
+        if (typeof wp.hooks !== 'undefined') {
+            const ourFilter = wp.hooks.hasFilter('editor.BlockEdit', 'lza-class-manager/with-class-manager');
+            console.log(`- Our filter registered: ${ourFilter ? 'Yes ✅' : 'No ❌'}`);
+        }
+        
+        // Check for React
+        console.log(`- React available: ${typeof React !== 'undefined' ? 'Yes ✅' : 'No ❌'}`);
+    });
+    </script>
+    <?php
+}
+add_action('admin_footer', 'lza_class_manager_diagnostics');

@@ -1,6 +1,6 @@
 .p-s { padding: 0.25rem; }
 .p-m { padding: 0.5rem; }
-.p-l { padding: 1rem; }
+.p-l { padding: var(--wp--preset--spacing--30); }
 .p-xl { padding: var(--wp--preset--spacing--80); }
 .px-xl { padding-inline: var(--wp--preset--spacing--80); }
 

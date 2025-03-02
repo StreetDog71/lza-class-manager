@@ -1,11 +1,12 @@
 /**
  * WordPress dependencies
  */
-import { registerPlugin } from '@wordpress/plugins';
-import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
+import { __ } from '@wordpress/i18n';
 import { InspectorControls } from '@wordpress/block-editor';
+import { PanelBody } from '@wordpress/components';
 import { createHigherOrderComponent } from '@wordpress/compose';
 import { addFilter } from '@wordpress/hooks';
+import { Fragment } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -13,24 +14,30 @@ import { addFilter } from '@wordpress/hooks';
 import ClassManagerPanel from './components/ClassManagerPanel';
 
 /**
- * Add the Class Manager panel to the block inspector controls
+ * Add custom class manager to all blocks using HOC
  */
-const withClassManagerPanel = createHigherOrderComponent((BlockEdit) => {
+const withClassManager = createHigherOrderComponent((BlockEdit) => {
     return (props) => {
+        
         return (
-            <>
+            <Fragment>
                 <BlockEdit {...props} />
                 <InspectorControls>
-                    <ClassManagerPanel clientId={props.clientId} />
+                    <PanelBody
+                        title={__('Class Manager', 'lza-class-manager')}
+                        initialOpen={true}
+                    >
+                        <ClassManagerPanel blockProps={props} />
+                    </PanelBody>
                 </InspectorControls>
-            </>
+            </Fragment>
         );
     };
-}, 'withClassManagerPanel');
+}, 'withClassManager');
 
-// Add our filter to the WordPress block editor
+// Add our filter to editor.BlockEdit
 addFilter(
     'editor.BlockEdit',
-    'lza-class-manager/with-class-manager-panel',
-    withClassManagerPanel
+    'lza-class-manager/with-class-manager',
+    withClassManager
 );

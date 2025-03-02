@@ -1,165 +1,219 @@
 /**
  * WordPress dependencies
  */
-import { useState, useEffect } from '@wordpress/element';
-import { PanelBody, TextControl } from '@wordpress/components';
-import { useSelect, useDispatch } from '@wordpress/data';
+import { useState, useCallback, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { TextControl } from '@wordpress/components';
+
+/**
+ * External dependencies
+ */
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 /**
  * Internal dependencies
  */
-import ClassList from './ClassList';
+import ClassItem from './ClassItem';
 
 /**
  * Class Manager Panel Component
+ * 
+ * Manages the classes for the selected block in the editor.
  */
-const ClassManagerPanel = ({ clientId }) => {
-    // State
-    const [classInput, setClassInput] = useState('');
-    const [suggestions, setSuggestions] = useState([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
-    
-    // Get block attributes
-    const { attributes, availableClasses } = useSelect((select) => {
-        const { getBlockAttributes } = select('core/block-editor');
-        const blockAttrs = getBlockAttributes(clientId) || {};
+const ClassManagerPanel = ({ blockProps }) => {
+    const [inputValue, setInputValue] = useState('');
+    const [suggestions, setShowSuggestions] = useState(false);
+    const [activeSuggestion, setActiveSuggestion] = useState(0);
+
+    // Get block attributes and setAttributes function from blockProps
+    const { attributes, setAttributes } = blockProps;
+    const { className = '' } = attributes;
+    const availableClasses = window.lzaClassManager?.availableClasses || [];
+
+    // Extract classes from the current block
+    const getClasses = useCallback(() => {
+        return className ? className.split(' ').filter(Boolean) : [];
+    }, [className]);
+
+    // Current list of classes
+    const [classes, setClassesList] = useState(getClasses());
+
+    // Update classes when block attributes change
+    useEffect(() => {
+        setClassesList(getClasses());
+    }, [className, getClasses]);
+
+    // Set classes back to the block
+    const setClasses = useCallback((newClasses) => {
+        const newClassName = newClasses.join(' ');
+        setAttributes({ className: newClassName });
+    }, [setAttributes]);
+
+    // Add a class to the list
+    const addClass = useCallback((classToAdd) => {
+        if (!classToAdd || classes.includes(classToAdd)) return;
         
-        return {
-            attributes: blockAttrs,
-            availableClasses: window.lzaClassManager?.availableClasses || []
-        };
-    }, [clientId]);
-    
-    // Get the dispatch functions
-    const { updateBlockAttributes } = useDispatch('core/block-editor');
-    
-    // Parse existing classes
-    const className = attributes.className || '';
-    const existingClasses = className.split(' ').filter(Boolean);
-    
-    // Handle class input change
-    const handleClassInputChange = (value) => {
-        setClassInput(value);
-        
-        // Show suggestions if input has content
-        if (value) {
-            // Filter available classes that match the input
-            const matchedClasses = availableClasses.filter(cls => 
-                cls.toLowerCase().includes(value.toLowerCase()) && 
-                !existingClasses.includes(cls)
-            );
-            
-            setSuggestions(matchedClasses);
-            setShowSuggestions(matchedClasses.length > 0);
-            setSelectedSuggestion(-1);
-        } else {
-            setShowSuggestions(false);
-            setSelectedSuggestion(-1);
-        }
+        const newClasses = [...classes, classToAdd];
+        setClassesList(newClasses);
+        setClasses(newClasses);
+        setInputValue('');
+    }, [classes, setClasses]);
+
+    // Remove a class from the list
+    const removeClass = useCallback((classToRemove) => {
+        const newClasses = classes.filter(item => item !== classToRemove);
+        setClassesList(newClasses);
+        setClasses(newClasses);
+    }, [classes, setClasses]);
+
+    // Handle input change for the class field
+    const handleInputChange = (value) => {
+        setInputValue(value);
+        setShowSuggestions(!!value);
+        setActiveSuggestion(0);
     };
-    
-    // Add a class
-    const addClass = (classToAdd) => {
-        if (!classToAdd || existingClasses.includes(classToAdd)) {
-            return;
-        }
-        
-        // Add the new class
-        const newClasses = [...existingClasses, classToAdd];
-        updateBlockAttributes(clientId, { className: newClasses.join(' ') });
-        
-        // Reset input and suggestions
-        setClassInput('');
+
+    // Handle suggestion selection
+    const selectSuggestion = (suggestion) => {
+        addClass(suggestion);
         setShowSuggestions(false);
     };
-    
-    // Remove a class
-    const removeClass = (classToRemove) => {
-        const newClasses = existingClasses.filter(cls => cls !== classToRemove);
-        updateBlockAttributes(clientId, { className: newClasses.join(' ') });
-    };
-    
-    // Reorder classes
-    const reorderClasses = (reorderedClasses) => {
-        updateBlockAttributes(clientId, { className: reorderedClasses.join(' ') });
-    };
-    
-    // Handle key down for keyboard navigation and selection
+
+    // Handle key navigation in suggestions
     const handleKeyDown = (e) => {
-        // Enter key - add class or select suggestion
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            
-            if (selectedSuggestion >= 0 && selectedSuggestion < suggestions.length) {
-                // Add selected suggestion
-                addClass(suggestions[selectedSuggestion]);
-            } else if (classInput) {
-                // Add current input
-                addClass(classInput);
-            }
-        }
-        // Arrow down - navigate suggestions
-        else if (e.key === 'ArrowDown' && showSuggestions) {
-            e.preventDefault();
-            setSelectedSuggestion(prev => 
-                prev < suggestions.length - 1 ? prev + 1 : 0
-            );
-        }
-        // Arrow up - navigate suggestions
-        else if (e.key === 'ArrowUp' && showSuggestions) {
-            e.preventDefault();
-            setSelectedSuggestion(prev => 
-                prev > 0 ? prev - 1 : suggestions.length - 1
-            );
-        }
-        // Escape - close suggestions
-        else if (e.key === 'Escape') {
-            e.preventDefault();
-            setShowSuggestions(false);
-            setSelectedSuggestion(-1);
+        // Only consider suggestions if there are some
+        const filteredSuggestions = availableClasses.filter(
+            cls => cls.toLowerCase().includes(inputValue.toLowerCase())
+        );
+        
+        if (!filteredSuggestions.length) return;
+
+        // Handle keyboard navigation
+        switch (e.key) {
+            case 'Enter':
+                e.preventDefault();
+                if (suggestions && filteredSuggestions[activeSuggestion]) {
+                    selectSuggestion(filteredSuggestions[activeSuggestion]);
+                } else if (inputValue) {
+                    addClass(inputValue);
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setActiveSuggestion(
+                    activeSuggestion > 0 ? activeSuggestion - 1 : filteredSuggestions.length - 1
+                );
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                // Show suggestions if they're hidden and we press down
+                if (!suggestions) {
+                    setShowSuggestions(true);
+                }
+                setActiveSuggestion(
+                    activeSuggestion < filteredSuggestions.length - 1 ? activeSuggestion + 1 : 0
+                );
+                break;
+            case 'Escape':
+                setShowSuggestions(false);
+                break;
+            case 'Tab':
+                // If suggestions are shown, select the current one
+                if (suggestions && filteredSuggestions[activeSuggestion]) {
+                    e.preventDefault();
+                    selectSuggestion(filteredSuggestions[activeSuggestion]);
+                }
+                break;
         }
     };
-    
+
+    // Handle drag and drop reordering
+    const handleDragEnd = (result) => {
+        if (!result.destination) return;
+
+        const reorderedClasses = Array.from(classes);
+        const [movedItem] = reorderedClasses.splice(result.source.index, 1);
+        reorderedClasses.splice(result.destination.index, 0, movedItem);
+        
+        setClassesList(reorderedClasses);
+        setClasses(reorderedClasses);
+    };
+
+    // Filtered suggestions based on input
+    const filteredSuggestions = inputValue ? availableClasses.filter(
+        cls => cls.toLowerCase().includes(inputValue.toLowerCase())
+    ) : [];
+
     return (
-        <PanelBody title={__('LZA Class Manager')} initialOpen={true}>
-            <div className="lza-class-manager">
-                <div className="lza-class-form">
-                    <TextControl
-                        label={__('Add Class(es)')}
-                        value={classInput}
-                        onChange={handleClassInputChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder={__('Enter class name and press Enter')}
-                        className="lza-class-input"
-                        autoComplete="off"
-                    />
-                </div>
+        <div className="lza-class-manager">
+            <div className="lza-class-input-container">
+                <TextControl
+                    label={__('Add class', 'lza-class-manager')}
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder={__('Type class name...', 'lza-class-manager')}
+                    className="lza-class-input"
+                    __nextHasNoMarginBottom={true}
+                    autoComplete="off"
+                />
                 
-                {showSuggestions && (
+                {/* Suggestions dropdown */}
+                {suggestions && filteredSuggestions.length > 0 && (
                     <div className="class-suggestions">
-                        {suggestions.map((suggestion, index) => (
-                            <div 
-                                key={suggestion} 
-                                className={`class-suggestion-item ${selectedSuggestion === index ? 'is-selected' : ''}`}
-                                onClick={() => addClass(suggestion)}
+                        {filteredSuggestions.map((suggestion, index) => (
+                            <div
+                                key={suggestion}
+                                className={`class-suggestion-item ${index === activeSuggestion ? 'is-selected' : ''}`}
+                                onClick={() => selectSuggestion(suggestion)}
+                                ref={index === activeSuggestion ? (el) => { 
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                } : null}
                             >
                                 {suggestion}
                             </div>
                         ))}
                     </div>
                 )}
-                
-                <div className="lza-applied-classes">
-                    <ClassList 
-                        classes={existingClasses}
-                        onRemove={removeClass}
-                        onReorder={reorderClasses}
-                    />
-                </div>
             </div>
-        </PanelBody>
+            
+            {/* Class list with drag and drop */}
+            <div className="lza-class-container">
+                {classes.length > 0 ? (
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                        <Droppable droppableId="class-list" direction="horizontal">
+                            {(provided) => (
+                                <div 
+                                    className="lza-class-list"
+                                    {...provided.droppableProps}
+                                    ref={provided.innerRef}
+                                >
+                                    {classes.map((className, index) => (
+                                        <Draggable 
+                                            key={className} 
+                                            draggableId={className} 
+                                            index={index}
+                                        >
+                                            {(provided, snapshot) => (
+                                                <ClassItem
+                                                    className={className}
+                                                    onRemove={removeClass}
+                                                    provided={provided}
+                                                    isDragging={snapshot.isDragging}
+                                                />
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </div>
+                            )}
+                        </Droppable>
+                    </DragDropContext>
+                ) : (
+                    <p className="lza-no-classes">{__('No classes added to this block yet', 'lza-class-manager')}</p>
+                )}
+            </div>
+        </div>
     );
 };
 

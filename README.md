@@ -5,13 +5,14 @@ A WordPress plugin for managing custom CSS classes for Gutenberg blocks.
 ## Features
 
 - Add and remove CSS classes to any block
-- Reorder classes with drag and drop
+- Reorder classes with drag and drop (using react-beautiful-dnd)
 - Auto-suggestion of available classes
 - Custom CSS editor for class definitions
 - Light and dark theme support for the CSS editor
 - Theme.json CSS variables sidebar for easy access to theme variables
 - Editor-safe class generation for proper block editor previews
 - Media query support for responsive classes
+- Fully implemented with modern WordPress coding standards using React
 
 ## Usage
 
@@ -45,30 +46,17 @@ Classes can be reordered using drag and drop:
 - Drag it to the desired position
 - Release to drop it in its new position
 
-This feature helps maintain a logical order of classes for better readability and organization.
+This feature is implemented using react-beautiful-dnd for accessibility and smooth animations.
 
-### Theme Support
+## Technical Details
 
-The plugin includes built-in support for different editor themes:
+This plugin is built using modern WordPress development practices:
 
-- Light (Default)
-- Dark (Dracula)
-
-Your theme preference is saved automatically when you switch themes.
-
-### Media Queries
-
-You can define responsive classes using standard CSS media queries in the editor:
-
-```css
-@media (max-width: 768px) {
-    .sm-p-m {
-        padding: 1rem;
-    }
-}
-```
-
-These classes will work correctly in both the editor and the frontend.
+- React components for the UI
+- React Beautiful DnD for drag and drop functionality
+- WordPress coding standards throughout
+- Proper Webpack build process through @wordpress/scripts
+- CSS minification for production use
 
 ## Development
 
@@ -90,3 +78,4 @@ npm run build
 - `npm run build` - Build for production
 - `npm run format` - Format code
 - `npm run lint:js` - Lint JavaScript files
+- `npm run lint:css` - Lint CSS files

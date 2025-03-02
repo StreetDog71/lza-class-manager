@@ -10,7 +10,7 @@
 
 .editor-styles-wrapper .p-l,
 .block-editor-block-list__block.p-l {
- padding: 1rem; }
+ padding: var(--wp--preset--spacing--30); }
 
 .editor-styles-wrapper .p-xl,
 .block-editor-block-list__block.p-xl {

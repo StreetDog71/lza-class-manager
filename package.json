@@ -1,17 +1,31 @@
 {
   "name": "lza-class-manager",
   "version": "1.0.0",
-  "description": "Class manager for WordPress blocks",
-  "main": "build/index.js",
+  "description": "WordPress plugin for managing custom CSS classes in Gutenberg blocks",
+  "main": "src/index.js",
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",
     "format": "wp-scripts format",
-    "lint:js": "wp-scripts lint-js"
+    "lint:js": "wp-scripts lint-js",
+    "lint:css": "wp-scripts lint-style",
+    "packages-update": "wp-scripts packages-update"
   },
   "author": "Lazy Algorithm",
   "license": "GPL-2.0-or-later",
   "devDependencies": {
-    "@wordpress/scripts": "^26.0.0"
+    "@wordpress/scripts": "^25.0.0"
+  },
+  "dependencies": {
+    "@wordpress/block-editor": "^11.0.0",
+    "@wordpress/components": "^23.0.0",
+    "@wordpress/compose": "^6.0.0",
+    "@wordpress/data": "^9.0.0",
+    "@wordpress/edit-post": "^7.0.0",
+    "@wordpress/editor": "^13.0.0",
+    "@wordpress/element": "^5.0.0",
+    "@wordpress/hooks": "^3.0.0",
+    "@wordpress/i18n": "^4.0.0",
+    "react-beautiful-dnd": "^13.1.1"
   }
 }

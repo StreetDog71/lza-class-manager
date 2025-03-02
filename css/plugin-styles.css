@@ -1,30 +1,109 @@
-/* Editor-only styles */
+/* Editor-only styles for the React-based Class Manager */
+
+/* Input container */
+.lza-class-input-container {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.lza-class-input {
+    width: 100%;
+}
+
+/* Class list area */
+.lza-class-container {
+    margin-top: 15px;
+}
+
+.lza-class-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: 10px;
+    min-height: 30px;
+    padding-bottom: 10px;
+}
+
+/* Class button styling - Single purpose button */
+.lza-class-button-wrapper {
+    display: inline-block;
+    position: relative;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    cursor: pointer; /* Default shows it's clickable */
+}
+
+.lza-class-button-wrapper.is-dragging {
+    opacity: 0.7;
+    z-index: 100;
+    cursor: grabbing; /* When dragging, show it's being grabbed */
+}
+
+/* Simplified class button - handles both drag and remove */
 .class-button {
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    color: #333333;
-    padding: 5px;
-    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    border: 1px solid #dfdfdf;
+    border-radius: 3px;
+    color: #333;
+    padding: 4px 6px;
     font-size: 12px;
-    text-align: center;
+    line-height: 1.5;
+    cursor: pointer; /* Show it's clickable */
+    user-select: none; /* Prevent text selection during drag */
     transition: all 0.2s ease;
-    margin: 0;
 }
 
+/* Hover and active states */
 .class-button:hover {
-    background-color: #dc3545;
+    background-color: #ff0000;
     color: #ffffff;
-    border-color: #dc3545;
+    border-color: #cc1818;
 }
 
-/* Hide datalist arrow */
-input::-webkit-calendar-picker-indicator {
-    display: none !important;
-    opacity: 0;
+.class-button:active {
+    background-color: #fee;
 }
 
-/* Class suggestion styles */
+/* Special styling to indicate drag mode */
+.lza-class-button-wrapper.is-dragging .class-button {
+    background-color: #e6f2f7;
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.class-name {
+    margin-right: 8px;
+}
+
+/* Super minimal remove button - styled as a small circle */
+.class-button-remove {
+    width: 8px;
+    height: 8px;
+    background-color: #cc1818; /* Default red color that can be overridden */
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.class-button-remove:hover {
+    background-color: #990000;
+}
+
+.class-button:hover .class-button-remove {
+    transform: scale(1.25);
+}
+
+/* Class suggestions dropdown - enhanced keyboard navigation */
 .class-suggestions {
+    position: absolute;
+    z-index: 999;
+    top: 100%;
+    left: 0;
+    right: 0;
     margin-top: 4px;
     background-color: #fff;
     border: 1px solid #ccc;
@@ -45,32 +124,45 @@ input::-webkit-calendar-picker-indicator {
     border-bottom: none;
 }
 
-.class-suggestion-item:hover,
+/* Make the selected suggestion more visible */
 .class-suggestion-item.is-selected {
+    background-color: #e5f1fa;
+    border-left: 2px solid #2271b1;
+    color: #0a4b78;
+    font-weight: 500;
+}
+
+.class-suggestion-item:hover:not(.is-selected) {
     background-color: #f7f7f7;
 }
 
+/* Empty state message */
+.lza-no-classes {
+    color: #888;
+    font-style: italic;
+    margin: 0;
+    padding: 10px 0;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .lza-class-list {
+        gap: 5px;
+    }
+    
+    .class-button {
+        padding: 2px 4px;
+        font-size: 11px;
+    }
+}
+
+/* Hide datalist arrow */
+input::-webkit-calendar-picker-indicator {
+    display: none !important;
+    opacity: 0;
+}
+
 /* Drag and drop styling */
-.lza-class-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-    min-height: 30px;
-    padding-bottom: 10px;
-}
-
-.lza-class-button-wrapper {
-    display: inline-flex;
-    position: relative;
-    cursor: grab;
-}
-
-.lza-class-button-wrapper.is-dragging {
-    opacity: 0.7;
-    z-index: 100;
-}
-
 .lza-class-button-wrapper.dragging-active {
     visibility: hidden;
 }
@@ -97,23 +189,12 @@ input::-webkit-calendar-picker-indicator {
     display: inline-block;
 }
 
-.lza-no-classes {
-    color: #888;
-    font-style: italic;
-    margin: 0;
-    padding: 10px 0;
-}
-
 /* Input form - updated for no button */
 .lza-class-form {
     width: 100%;
 }
 
 .lza-class-form .components-base-control {
-    width: 100%;
-}
-
-.lza-class-input {
     width: 100%;
 }
 
@@ -134,7 +215,6 @@ input::-webkit-calendar-picker-indicator {
 
 /* Hide drag handles and remove buttons */
 .class-button-drag-handle,
-.class-button-remove,
 .lza-drag-instructions {
     display: none !important;
 }

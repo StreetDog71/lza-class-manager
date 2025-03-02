@@ -343,6 +343,23 @@
     color: #007cba;
 }
 
+/* File location info notice */
+.lza-info-notice {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007cba;
+    padding: 10px 15px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #555;
+}
+
+.lza-info-notice code {
+    background: #f0f0f0;
+    padding: 3px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
 /* Responsive adjustments */
 @media screen and (max-width: 960px) {
     .lza-editor-layout {
@@ -357,4 +374,68 @@
     .lza-css-editor-container {
         height: 600px;
     }
+}
+
+/* File info panel styling */
+.lza-file-info-panel {
+    background-color: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    margin: 20px 0;
+    padding: 15px 20px;
+    border-radius: 4px;
+}
+
+.lza-file-info-panel h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #1d2327;
+    display: flex;
+    align-items: center;
+}
+
+.lza-file-info-panel h3 .dashicons {
+    color: #007cba;
+    margin-right: 8px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.lza-file-info-panel p {
+    margin: 10px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #50575e;
+    display: flex;
+    align-items: center;
+}
+
+.lza-file-info-panel .dashicons {
+    color: #007cba;
+    margin-right: 8px;
+}
+
+.lza-file-info-panel code {
+    background: #f0f0f0;
+    padding: 3px 5px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #1d2327;
+}
+
+.lza-file-info-panel p:last-child {
+    margin-bottom: 0;
+}
+
+.lza-file-info-panel strong {
+    color: #007cba;
+    font-weight: 600;
+}
+
+/* Remove the old notices that are now in the panel */
+.lza-minify-info, 
+.lza-info-notice {
+    display: none;
 }
