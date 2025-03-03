@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<ruleset name="Lazy Algorithm">
+    <description>WP Coding standards</description>
+
+
+    <file>.</file>
+
+    <arg name="extensions" value="php"/>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/stubs/*</exclude-pattern>
+	<exclude-pattern>/dist/*</exclude-pattern>
+
+    <arg value="-colors"/>
+    <arg value="ns"/>
+
+    <rule ref="WordPress"/>
+    <rule ref="WordPress-Core">
+        <!-- PHPCBF PHP 7.2 compatibility Fix -->
+        <exclude name="WordPress.Arrays.CommaAfterArrayItem.NoComma"/>
+    </rule>
+
+    <rule ref="WordPress-Extra">
+        <exclude name="WordPress.Files.FileName"/>
+        <exclude name="WordPress.NamingConventions.ValidVariableName"/>
+    </rule>
+
+    <rule ref="WordPress-Docs"/>
+
+    <rule ref="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+    <rule ref="Generic.Commenting.Todo"/>
+	<rule ref="Squiz.Commenting.FunctionComment.Missing"/>
+	<rule ref="Squiz.Commenting.VariableComment.Missing"/>
+
+    <rule ref="PHPCompatibility"/>
+    <config name="testVersion" value="8.0-"/>
+
+    <rule ref="SlevomatCodingStandard.Namespaces.UnusedUses"/>
+    <rule ref="SlevomatCodingStandard.Classes.ModernClassNameReference"/>
+    <rule ref="SlevomatCodingStandard.Functions.StaticClosure"/>
+    <rule ref="SlevomatCodingStandard.PHP.DisallowDirectMagicInvokeCall"/>
+    <rule ref="SlevomatCodingStandard.Variables.UselessVariable"/>
+    <rule ref="SlevomatCodingStandard.ControlStructures.RequireYodaComparison"/>
+	
+    <rule ref="Security"/>
+
+    <config name="minimum_supported_wp_version" value="5.5"/>
+</ruleset>
