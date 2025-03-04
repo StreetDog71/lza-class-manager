@@ -5,9 +5,10 @@
 class LZA_CSS_Processor {
 	/**
 	 * CSS file definitions - unified into a single property
+	 *
+	 * @var array<string, array<string, string>>
 	 */
 	private $css_files = array(
-		// Plugin source files and their destinations
 		'source_files' => array(
 			'custom' => array(
 				'source' => 'css/custom-classes.css',
@@ -27,17 +28,17 @@ class LZA_CSS_Processor {
 	 * @return array Array of CSS file paths and URLs
 	 */
 	public function get_css_paths() {
-		// Get WordPress uploads directory info
+		// Get WordPress uploads directory info.
 		$upload_dir = wp_upload_dir();
 
-		// Define the plugin's CSS folder in uploads
+		// Define the plugin's CSS folder in uploads.
 		$css_folder = 'lza-css';
 
-		// Create the paths
+		// Create the paths.
 		$uploads_path = trailingslashit( $upload_dir['basedir'] ) . $css_folder;
 		$uploads_url = trailingslashit( $upload_dir['baseurl'] ) . $css_folder;
 
-		// Return array of all important paths and URLs
+		// Return array of all important paths and URLs.
 		return array(
 			'uploads_dir' => $uploads_path,
 			'uploads_url' => $uploads_url,
@@ -57,7 +58,7 @@ class LZA_CSS_Processor {
 	/**
 	 * Ensure CSS directories exist and are writable
 	 *
-	 * @return bool Success status
+	 * @return boolean True if directories are ready, false otherwise
 	 */
 	public function ensure_css_directories() {
 		$paths = $this->get_css_paths();
@@ -66,6 +67,11 @@ class LZA_CSS_Processor {
 		if ( ! file_exists( $paths['uploads_dir'] ) ) {
 			if ( ! wp_mkdir_p( $paths['uploads_dir'] ) ) {
 				error_log( 'LZA Class Manager: Failed to create directory ' . $paths['uploads_dir'] );
+				$this->add_admin_notice( 'error', sprintf( 
+					/* translators: %s: Directory path */
+					__( 'LZA Class Manager could not create the CSS directory: %s. Please check your file permissions.', 'lza-class-manager' ), 
+					'<code>' . esc_html( $paths['uploads_dir'] ) . '</code>'
+				));
 				return false;
 			}
 
@@ -73,18 +79,35 @@ class LZA_CSS_Processor {
 			file_put_contents( trailingslashit( $paths['uploads_dir'] ) . 'index.php', "<?php\n// Silence is golden." );
 		}
 
-		// Ensure the directory is writable
+		// Check if the directory is writable
 		if ( ! is_writable( $paths['uploads_dir'] ) ) {
-			@chmod( $paths['uploads_dir'], 0755 );
-
-			// Check if chmod worked
-			if ( ! is_writable( $paths['uploads_dir'] ) ) {
-				error_log( 'LZA Class Manager: Directory is not writable - ' . $paths['uploads_dir'] );
-				return false;
-			}
+			error_log( 'LZA Class Manager: Directory is not writable - ' . $paths['uploads_dir'] );
+			$this->add_admin_notice( 'error', sprintf(
+				/* translators: %s: Directory path */
+				__( 'LZA Class Manager cannot write to the CSS directory: %s. Please set the appropriate permissions (755 or 775) on this directory.', 'lza-class-manager' ),
+				'<code>' . esc_html( $paths['uploads_dir'] ) . '</code>'
+			));
+			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Add admin notice
+	 *
+	 * @param string $type    Notice type (error, warning, success, info)
+	 * @param string $message Notice message
+	 * @return void
+	 */
+	private function add_admin_notice( $type, $message ) {
+		add_action( 'admin_notices', function() use ( $type, $message ) {
+			?>
+			<div class="notice notice-<?php echo esc_attr( $type ); ?> is-dismissible">
+				<p><?php echo wp_kses_post( $message ); ?></p>
+			</div>
+			<?php
+		});
 	}
 
 	/**
@@ -636,7 +659,7 @@ class LZA_CSS_Processor {
 				$file_info_html .= '<p>
                     <span class="dashicons dashicons-media-archive"></span>
                     Minified classes: <strong>' . $this->format_file_size( $min_size ) . '</strong>
-                    (Original: ' . $this->format_file_size( $orig_size ) . ') - 
+                    (Original: ' . $this->format_file_size( $orig_size ) . ') -
                     <strong>' . $percent . '% reduction</strong>
                 </p>';
 			} else {
@@ -650,7 +673,7 @@ class LZA_CSS_Processor {
 			if ( file_exists( $root_vars_path ) && $vars_size > 0 ) {
 				$file_info_html .= '<p>
                     <span class="dashicons dashicons-admin-appearance"></span>
-                    Root variables: <strong>' . $this->format_file_size( $vars_size ) . '</strong> 
+                    Root variables: <strong>' . $this->format_file_size( $vars_size ) . '</strong>
                     <small>(kept separate for better performance)</small>
                 </p>';
 			}

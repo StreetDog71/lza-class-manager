@@ -17,14 +17,14 @@ class LZA_Admin {
 	 * @param LZA_CSS_Processor $css_processor CSS processor instance
 	 */
 	public function __construct( $css_processor = null ) {
-		// Initialize CSS processor if not provided
+		// Initialize CSS processor if not provided.
 		if ( null === $css_processor ) {
 			$this->css_processor = new LZA_CSS_Processor();
 		} else {
 			$this->css_processor = $css_processor;
 		}
 
-		// Debug information
+		// Debug information.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'LZA Class Manager Admin: Constructor called with CSS processor: ' . ( null !== $css_processor ? 'yes' : 'no' ) );
 		}
@@ -38,7 +38,7 @@ class LZA_Admin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 
-		// Register AJAX handlers
+		// Register AJAX handlers.
 		add_action( 'wp_ajax_lza_save_editor_theme', array( $this, 'save_editor_theme' ) );
 		add_action( 'wp_ajax_lza_save_css', array( $this, 'ajax_save_css' ) );
 	}
@@ -47,14 +47,14 @@ class LZA_Admin {
 	 * Add admin menu page
 	 */
 	public function add_admin_menu() {
-		// Change from add_menu_page to add_management_page (Tools menu)
+		// Change from add_menu_page to add_management_page (Tools menu).
 		add_management_page(
-			'LZA Class Manager',  // Page title
-			'LZA Class Manager',         // Menu title
-			'manage_options',      // Capability
-			'lza-class-manager',   // Menu slug
-			array( $this, 'render_admin_page' ), // Callback function
-			20                     // Position in the menu
+			'LZA Class Manager',  // Page title.
+			'LZA Class Manager',         // Menu title.
+			'manage_options',      // Capability.
+			'lza-class-manager',   // Menu slug.
+			array( $this, 'render_admin_page' ), // Callback function.
+			20                     // Position in the menu.
 		);
 	}
 
@@ -80,12 +80,12 @@ class LZA_Admin {
 			return '';
 		}
 
-		// Debug logging
+		// Debug logging.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'LZA Class Manager: sanitize_custom_css called with ' . strlen( $input ) . ' bytes of CSS' );
 		}
 
-		// Make sure we have a CSS processor instance
+		// Make sure we have a CSS processor instance.
 		if ( ! $this->css_processor ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( 'LZA Class Manager: Creating new CSS processor in sanitize_custom_css' );
@@ -93,7 +93,7 @@ class LZA_Admin {
 			$this->css_processor = new LZA_CSS_Processor();
 		}
 
-		// Process and save CSS to files
+		// Process and save CSS to files.
 		$result = $this->css_processor->process_css( $input );
 
 		if ( false === $result ) {
@@ -118,30 +118,30 @@ class LZA_Admin {
 	 * Enqueue admin scripts
 	 */
 	public function admin_enqueue_scripts( $hook ) {
-		// Update the hook check for the Tools submenu page
+		// Update the hook check for the Tools submenu page.
 		if ( 'tools_page_lza-class-manager' !== $hook ) {
 			return;
 		}
 
-		// Debug info
+		// Debug info.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( 'LZA Class Manager: Loading admin scripts for hook ' . $hook );
 		}
 
-		// Get user's preferred theme or default to 'default'
+		// Get user's preferred theme or default to 'default'.
 		$preferred_theme = get_user_meta( get_current_user_id(), 'lza_editor_theme', true ) ?: 'default';
 
-		// List of available themes
+		// List of available themes.
 		$available_themes = array(
 			'default' => 'Light',
 			'dracula' => 'Dark',
 		);
 
-		// Make sure we load all the required CodeMirror components
+		// Make sure we load all the required CodeMirror components.
 		wp_enqueue_style( 'wp-codemirror' );
 		$code_editor_settings = wp_enqueue_code_editor( array( 'type' => 'text/css' ) );
 
-		// Force CSS Editor specific settings
+		// Force CSS Editor specific settings.
 		$settings = array(
 			'type' => 'text/css',
 			'codemirror' => array(
@@ -159,14 +159,14 @@ class LZA_Admin {
 			),
 		);
 
-		// Enqueue all available themes from our plugin directory
-		foreach ( $available_themes as $theme_key => $theme_name ) {
+		// Enqueue all available themes from our plugin directory.
+		foreach ( array_keys( $available_themes ) as $theme_key ) {
 			if ( 'default' !== $theme_key ) {
 				// Check if the theme file exists in our plugin
 				$theme_file_path = LZA_CLASS_MANAGER_PATH . 'css/themes/' . $theme_key . '.css';
 				$theme_file_url = LZA_CLASS_MANAGER_URL . 'css/themes/' . $theme_key . '.css';
 
-				// Only try to enqueue if the file exists
+				// Only try to enqueue if the file exists.
 				if ( file_exists( $theme_file_path ) ) {
 					wp_enqueue_style(
 						'codemirror-theme-' . $theme_key,
@@ -175,7 +175,7 @@ class LZA_Admin {
 						LZA_CLASS_MANAGER_VERSION
 					);
 				} else {
-					// If theme doesn't exist, try to get it from WordPress core
+					// If theme doesn't exist, try to get it from WordPress core.
 					wp_enqueue_style(
 						'codemirror-theme-' . $theme_key,
 						includes_url( 'js/codemirror/theme/' . $theme_key . '.css' ),
@@ -186,7 +186,7 @@ class LZA_Admin {
 			}
 		}
 
-		// Ensure all required scripts are loaded
+		// Ensure all required scripts are loaded.
 		wp_enqueue_script( 'jquery' );
 		wp_enqueue_script( 'wp-codemirror' );
 
@@ -384,7 +384,7 @@ class LZA_Admin {
 		<div class="wrap">
 			<h1>LZA Class Manager</h1>
 			<p>Edit your custom CSS classes below. These classes will be available in the LZA Class Manager panel in the block editor.</p>
-			
+
 			<form method="post" action="" id="lza-css-form">
 				<?php wp_nonce_field( 'lza_save_css', 'lza_css_nonce' ); ?>
 				<div class="lza-editor-layout">
@@ -398,7 +398,7 @@ class LZA_Admin {
 						</div>
 						<textarea id="lza_custom_css" name="lza_custom_css" rows="20" class="large-text code"><?php echo esc_textarea( $css_content ); ?></textarea>
 					</div>
-					
+
 					<?php if ( ! empty( $css_variables ) ) : ?>
 					<div class="lza-variables-sidebar">
 						<div class="lza-variables-header">
@@ -415,7 +415,7 @@ class LZA_Admin {
 					</div>
 					<?php endif; ?>
 				</div>
-				
+
 				<?php if ( ! empty( $file_info_html ) ) : ?>
 				<!-- File information panel -->
 				<div class="lza-file-info-panel">
@@ -427,7 +427,7 @@ class LZA_Admin {
 				<?php endif; ?>
 			</form>
 		</div>
-		
+
 		<?php if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) : ?>
 		<!-- Debug section - only visible in WP_DEBUG mode -->
 		<div class="lza-debug-section">
@@ -439,13 +439,13 @@ class LZA_Admin {
 				<span id="lza-ajax-result" style="margin-left: 10px; font-style: italic;"></span>
 			</div>
 		</div>
-		
+
 		<script>
 		jQuery(document).ready(function($) {
 			// Test AJAX connection
 			$('#lza-test-ajax').on('click', function() {
 				$('#lza-ajax-result').text('Testing AJAX connection...');
-				
+
 				$.ajax({
 					url: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
 					type: 'POST',
@@ -464,11 +464,11 @@ class LZA_Admin {
 					}
 				});
 			});
-			
+
 			// Test theme save functionality
 			$('#lza-test-theme-save').on('click', function() {
 				$('#lza-ajax-result').text('Testing theme save...');
-				
+
 				$.ajax({
 					url: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
 					type: 'POST',
@@ -492,7 +492,7 @@ class LZA_Admin {
 		});
 		</script>
 		<?php endif; ?>
-		
+
 		<!-- Fallback script to ensure CodeMirror initializes even if the main JS fails -->
 		<script>
 		jQuery(document).ready(function($) {
@@ -501,11 +501,11 @@ class LZA_Admin {
 				// Check if CodeMirror has been initialized
 				var $editor = $('#lza_custom_css');
 				var hasCMWrapper = $editor.siblings('.CodeMirror').length > 0;
-				
+
 				// If not initialized, try a fallback initialization
 				if (!hasCMWrapper && typeof wp !== 'undefined' && wp.codeEditor) {
 					console.log('Using fallback editor initialization');
-					
+
 					// Basic initialization
 					var settings = {
 						codemirror: {
@@ -514,7 +514,7 @@ class LZA_Admin {
 							lineWrapping: true
 						}
 					};
-					
+
 					try {
 						wp.codeEditor.initialize($editor, settings);
 					} catch(e) {
@@ -524,17 +524,17 @@ class LZA_Admin {
 			}, 1000); // Check after 1 second
 		});
 		</script>
-		
+
 		<!-- Script for handling CSS variables -->
 		<script>
 		jQuery(document).ready(function($) {
 			// Make sure we don't double-bind click events
 			$('.lza-css-variable').off('click').on('click', function() {
 				var variable = $(this).data('variable');
-				
+
 				// Find CodeMirror instance directly
 				var cmInstance = null;
-				
+
 				// Try to find the CodeMirror instance
 				if (window.lzaCodeMirror) {
 					// Use the globally stored instance
@@ -548,16 +548,16 @@ class LZA_Admin {
 						}
 					});
 				}
-				
+
 				// Insert at cursor position
 				if (cmInstance) {
 					var doc = cmInstance.getDoc();
 					var cursor = doc.getCursor();
 					doc.replaceRange('var(' + variable + ')', cursor);
-					
+
 					// Focus the editor
 					cmInstance.focus();
-					
+
 					// Show visual feedback
 					$(this).addClass('inserted');
 					setTimeout(function() {
@@ -569,13 +569,13 @@ class LZA_Admin {
 					var text = $textarea.val();
 					var pos = $textarea.prop('selectionStart');
 					var textToInsert = 'var(' + variable + ')';
-					
+
 					$textarea.val(
-						text.substring(0, pos) + 
-						textToInsert + 
+						text.substring(0, pos) +
+						textToInsert +
 						text.substring(pos)
 					);
-					
+
 					// Set cursor position after inserted text
 					$textarea.prop('selectionStart', pos + textToInsert.length);
 					$textarea.prop('selectionEnd', pos + textToInsert.length);
