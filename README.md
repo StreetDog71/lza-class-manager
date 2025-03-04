@@ -87,7 +87,7 @@ Example:
 - **Dark Mode Theme**: Added Dracula theme option for the code editor
 - **UI Improvements**: Better styling and visual feedback
 - **Real Time Preview**: Preview of the CSS classes when browsing through the suggestions
-- **Media Queries exclusion**: Exclude all classes inside @media queries from the editor-safe-classes.css flie to prevent incorrect override of the responsive classes in the editor
+- **Media Queries exclusion**: Exclude all classes inside @media queries from the editor-safe-classes.css file to prevent incorrect override of the responsive classes in the editor
 - **Code revision**: Code revision and cleanup (Nuno to the rescue!)
 - **Coding standards**: Implementation of coding standards tools and first tests (Nuno to the rescue again!)
 
