@@ -13,7 +13,8 @@
     "dictionaries": [],
     "words": [
         "ABSPATH",
-        "bloginfo"
+        "bloginfo",
+        "trailingslashit"
     ],
     "ignoreWords": [],
     "import": []
