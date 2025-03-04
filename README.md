@@ -86,6 +86,8 @@ Example:
 - **Keyboard Navigation**: Added keyboard navigation for class suggestions with auto-scrolling
 - **Dark Mode Theme**: Added Dracula theme option for the code editor
 - **UI Improvements**: Better styling and visual feedback
+- **Real Time Preview**: Preview of the CSS classes when browsing through the suggestions
+- **Media Queries exclusion**: Exclude all classes inside @media queries from the editor-safe-classes.css to prevent incorrect override of the responsive classes in the editor
 
 ## Technical Details
 
