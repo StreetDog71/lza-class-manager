@@ -4,9 +4,13 @@
  *
  * This file helps diagnose issues with the code editor.
  * Access it via: /wp-admin/tools.php?page=lza-class-manager&diagnostics=1
+ *
+ * @package LZA\ClassManager
  */
 
-// Exit if accessed directly
+namespace LZA\ClassManager;
+
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -14,31 +18,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class for diagnostic tools
  */
-class LZA_Diagnostics {
+class Diagnostics {
 	/**
 	 * Run diagnostics
+	 *
+	 * @return void
 	 */
-	public static function run() {
-		// Only run if explicitly requested and user has permissions
-		if ( ! isset( $_GET['diagnostics'] ) || 1 != $_GET['diagnostics'] || ! current_user_can( 'manage_options' ) ) {
+	public static function run(): void {
+		// Only run if explicitly requested and user has permissions.
+		if ( ! isset( $_GET['diagnostics'] ) || 1 !== (int) $_GET['diagnostics'] || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		// Basic plugin info
+		// Basic plugin info.
 		$info = array(
-			'Plugin Path' => LZA_CLASS_MANAGER_PATH,
-			'Plugin URL' => LZA_CLASS_MANAGER_URL,
-			'Plugin Version' => LZA_CLASS_MANAGER_VERSION,
-			'WordPress Version' => get_bloginfo( 'version' ),
-			'PHP Version' => phpversion(),
+			'Plugin Path'        => LZA_CLASS_MANAGER_PATH,
+			'Plugin URL'         => LZA_CLASS_MANAGER_URL,
+			'Plugin Version'     => LZA_CLASS_MANAGER_VERSION,
+			'WordPress Version'  => get_bloginfo( 'version' ),
+			'PHP Version'        => phpversion(),
 		);
 
-		// Check for critical files
+		// Check for critical files.
 		$files_to_check = array(
-			'Plugin Main File' => LZA_CLASS_MANAGER_PATH . 'lza-class-manager.php',
-			'Admin JS' => LZA_CLASS_MANAGER_PATH . 'js/admin.js',
-			'Admin CSS' => LZA_CLASS_MANAGER_PATH . 'css/admin-styles.css',
-			'Theme: Dracula' => LZA_CLASS_MANAGER_PATH . 'css/themes/dracula.css',
+			'Plugin Main File'  => LZA_CLASS_MANAGER_PATH . 'lza-class-manager.php',
+			'Admin JS'          => LZA_CLASS_MANAGER_PATH . 'js/admin.js',
+			'Admin CSS'         => LZA_CLASS_MANAGER_PATH . 'css/admin-styles.css',
+			'Theme: Dracula'    => LZA_CLASS_MANAGER_PATH . 'css/themes/dracula.css',
 		);
 
 		$file_status = array();
@@ -46,31 +52,39 @@ class LZA_Diagnostics {
 			$file_status[ $label ] = file_exists( $path ) ? 'Exists' : 'Missing';
 		}
 
-		// Check user preferences
+		// Check user preferences.
 		$user_id = get_current_user_id();
 		$editor_theme = get_user_meta( $user_id, 'lza_editor_theme', true );
 
 		$user_info = array(
-			'User ID' => $user_id,
+			'User ID'               => $user_id,
 			'Editor Theme Preference' => $editor_theme ? $editor_theme : 'Not set (will use default)',
 		);
 
-		// Test WordPress CodeMirror availability
+		// Test WordPress CodeMirror availability.
 		$codemirror_test = wp_enqueue_code_editor( array( 'type' => 'text/css' ) );
 		$codemirror_status = is_array( $codemirror_test ) && ! empty( $codemirror_test ) ?
 			'Available' : 'Not available (check if WordPress has CodeMirror)';
 
-		// Display the diagnostics
+		// Display the diagnostics.
 		self::display_diagnostics( $info, $file_status, $user_info, $codemirror_status, $codemirror_test );
 
-		// Don't continue with the regular page after showing diagnostics
+		// Don't continue with the regular page after showing diagnostics.
 		exit;
 	}
 
 	/**
 	 * Display diagnostic information
+	 *
+	 * @param array  $info             Basic plugin information.
+	 * @param array  $file_status      Status of critical files.
+	 * @param array  $user_info        User preference information.
+	 * @param string $codemirror_status Status of CodeMirror.
+	 * @param array  $codemirror_test  CodeMirror test results.
+	 *
+	 * @return void
 	 */
-	private static function display_diagnostics( $info, $file_status, $user_info, $codemirror_status, $codemirror_test ) {
+	private static function display_diagnostics( array $info, array $file_status, array $user_info, string $codemirror_status, array $codemirror_test ): void {
 		?>
 		<!DOCTYPE html>
 		<html>
@@ -137,7 +151,7 @@ class LZA_Diagnostics {
 		</head>
 		<body>
 			<h1>LZA Class Manager Diagnostics</h1>
-			
+
 			<section>
 				<h2>Plugin Information</h2>
 				<table>
@@ -151,7 +165,7 @@ class LZA_Diagnostics {
 					</tbody>
 				</table>
 			</section>
-			
+
 			<section>
 				<h2>File System Check</h2>
 				<table>
@@ -165,7 +179,7 @@ class LZA_Diagnostics {
 						<?php foreach ( $file_status as $file => $status ) : ?>
 						<tr>
 							<td><?php echo esc_html( $file ); ?></td>
-							<td class="<?php echo $status === 'Exists' ? 'success' : 'error'; ?>">
+							<td class="<?php echo 'Exists' === $status ? 'success' : 'error'; ?>">
 								<?php echo esc_html( $status ); ?>
 							</td>
 						</tr>
@@ -173,7 +187,7 @@ class LZA_Diagnostics {
 					</tbody>
 				</table>
 			</section>
-			
+
 			<section>
 				<h2>User Information</h2>
 				<table>
@@ -187,69 +201,73 @@ class LZA_Diagnostics {
 					</tbody>
 				</table>
 			</section>
-			
+
 			<section>
 				<h2>CodeMirror Status</h2>
-				<p>CodeMirror: <span class="<?php echo $codemirror_status === 'Available' ? 'success' : 'error'; ?>"><?php echo esc_html( $codemirror_status ); ?></span></p>
-				
+				<p>CodeMirror: <span class="<?php echo 'Available' === $codemirror_status ? 'success' : 'error'; ?>"><?php echo esc_html( $codemirror_status ); ?></span></p>
+
 				<h3>CodeMirror Settings Response</h3>
 				<pre><?php echo esc_html( print_r( $codemirror_test, true ) ); ?></pre>
 			</section>
-			
+
 			<a href="<?php echo esc_url( admin_url( 'tools.php?page=lza-class-manager' ) ); ?>" class="back-link">Back to LZA Class Manager</a>
 		</body>
 		</html>
 		<?php
 	}
-}
 
-// Hook into plugin init
-add_action( 'admin_init', array( 'LZA_Diagnostics', 'run' ) );
-
-/**
- * Add diagnostics to footer
- */
-function lza_class_manager_diagnostics() {
-	// Only run in admin and when debug is on
-	if ( ! is_admin() || ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
-		return;
-	}
-
-	?>
-	<script>
-	// Log Gutenberg environment details
-	document.addEventListener('DOMContentLoaded', function() {
-		console.log('LZA Class Manager Diagnostics:');
-		
-		// Check if we're in the block editor
-		if (typeof wp === 'undefined') {
-			console.log('- WordPress JS API not found');
+	/**
+	 * Add diagnostics to footer
+	 *
+	 * @return void
+	 */
+	public static function add_footer_diagnostics(): void {
+		// Only run in admin and when debug is on.
+		if ( ! is_admin() || ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
 			return;
 		}
-		
-		// Check required JS modules
-		const modules = [
-			'blockEditor', 'blocks', 'components', 'compose', 
-			'data', 'element', 'hooks', 'i18n', 'plugins'
-		];
-		
-		modules.forEach(module => {
-			console.log(`- wp.${module}: ${typeof wp[module] !== 'undefined' ? 'Available ✅' : 'Missing ❌'}`);
+
+		?>
+		<script>
+		// Log Gutenberg environment details.
+		document.addEventListener('DOMContentLoaded', function() {
+			console.log('LZA Class Manager Diagnostics:');
+
+			// Check if we're in the block editor.
+			if (typeof wp === 'undefined') {
+				console.log('- WordPress JS API not found');
+				return;
+			}
+
+			// Check required JS modules.
+			const modules = [
+				'blockEditor', 'blocks', 'components', 'compose',
+				'data', 'element', 'hooks', 'i18n', 'plugins'
+			];
+
+			modules.forEach(module => {
+				console.log(`- wp.${module}: ${typeof wp[module] !== 'undefined' ? 'Available ✅' : 'Missing ❌'}`);
+			});
+
+			// Check if our plugin is loaded.
+			console.log(`- lzaClassManager global: ${typeof window.lzaClassManager !== 'undefined' ? 'Available ✅' : 'Missing ❌'}`);
+
+			// Check for specific hooks.
+			if (typeof wp.hooks !== 'undefined') {
+				const ourFilter = wp.hooks.hasFilter('editor.BlockEdit', 'lza-class-manager/with-class-manager');
+				console.log(`- Our filter registered: ${ourFilter ? 'Yes ✅' : 'No ❌'}`);
+			}
+
+			// Check for React.
+			console.log(`- React available: ${typeof React !== 'undefined' ? 'Yes ✅' : 'No ❌'}`);
 		});
-		
-		// Check if our plugin is loaded
-		console.log(`- lzaClassManager global: ${typeof window.lzaClassManager !== 'undefined' ? 'Available ✅' : 'Missing ❌'}`);
-		
-		// Check for specific hooks
-		if (typeof wp.hooks !== 'undefined') {
-			const ourFilter = wp.hooks.hasFilter('editor.BlockEdit', 'lza-class-manager/with-class-manager');
-			console.log(`- Our filter registered: ${ourFilter ? 'Yes ✅' : 'No ❌'}`);
-		}
-		
-		// Check for React
-		console.log(`- React available: ${typeof React !== 'undefined' ? 'Yes ✅' : 'No ❌'}`);
-	});
-	</script>
-	<?php
+		</script>
+		<?php
+	}
 }
-add_action( 'admin_footer', 'lza_class_manager_diagnostics' );
+
+// Hook into plugin init.
+add_action( 'admin_init', array( Diagnostics::class, 'run' ) );
+
+// Hook the footer diagnostics.
+add_action( 'admin_footer', array( Diagnostics::class, 'add_footer_diagnostics' ) );
