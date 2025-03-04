@@ -375,7 +375,7 @@ class LZA_CSS_Processor {
 
 	/**
 	 * Generate editor-safe CSS from the custom CSS
-	 * Fix handling of media queries to properly include nested classes
+	 * Excludes media queries to prevent responsive styles from affecting the editor
 	 * Now also handles root variables
 	 */
 	public function generate_editor_safe_css( $css_content ) {
@@ -393,9 +393,8 @@ class LZA_CSS_Processor {
 		$standard_classes = $this->extract_regular_classes( $css_content );
 		$editor_css .= $standard_classes;
 
-		// Process media queries with their nested classes
-		$media_query_css = $this->extract_media_query_classes( $css_content );
-		$editor_css .= $media_query_css;
+		 // Removed: Media query classes extraction
+		 // This is intentional to keep editor styles simpler and avoid responsive styles in admin
 
 		// Write the generated CSS to file
 		file_put_contents( $editor_css_path, $editor_css );
@@ -435,160 +434,105 @@ class LZA_CSS_Processor {
 	 * @return string Editor-safe CSS for regular classes
 	 */
 	public function extract_regular_classes( $css_content ) {
+		// Step 1: Remove comments to avoid confusion
+		$css_content = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $css_content);
+		
+		// Step 2: Remove :root blocks which we handle separately
+		$css_without_root = preg_replace('/:root\s*{[^}]+}/s', '', $css_content);
+		
+		// Step 3: Collect ALL media query blocks for complete removal
+		$media_queries = array();
+		$offset = 0;
+		
+		while (preg_match('/@media[^{]*{/i', $css_without_root, $matches, PREG_OFFSET_CAPTURE, $offset)) {
+			$media_start_pos = $matches[0][1];
+			$media_start = $matches[0][0];
+			
+			// Find the matching closing brace by counting opening and closing braces
+			$brace_count = 1;
+			$pos = $media_start_pos + strlen($media_start);
+			$media_length = 0;
+			
+			while ($brace_count > 0 && $pos < strlen($css_without_root)) {
+				$char = $css_without_root[$pos];
+				if ($char === '{') {
+					$brace_count++;
+				} elseif ($char === '}') {
+					$brace_count--;
+				}
+				$pos++;
+				$media_length++;
+				
+				// Safety check to avoid infinite loops
+				if ($media_length > 100000) {
+					break;
+				}
+			}
+			
+			// Store the complete media query
+			$media_query = substr($css_without_root, $media_start_pos, $media_length + strlen($media_start));
+			$media_queries[] = $media_query;
+			
+			// Move past this media query for the next iteration
+			$offset = $media_start_pos + $media_length + 1;
+		}
+		
+		// Step 4: Extract classes from media queries to exclude them
+		$media_query_classes = array();
+		
+		foreach ($media_queries as $media_query) {
+			if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,|\s*\{|\s*\.)/s', $media_query, $matches)) {
+				if (isset($matches[1]) && is_array($matches[1])) {
+					$media_query_classes = array_merge($media_query_classes, $matches[1]);
+				}
+			}
+		}
+		
+		// Make sure class names are unique
+		$media_query_classes = array_unique($media_query_classes);
+		
+		// Step 5: Remove all media queries from CSS for processing regular classes
+		$css_without_media = $css_without_root;
+		foreach ($media_queries as $media_query) {
+			$css_without_media = str_replace($media_query, '', $css_without_media);
+		}
+		
+		// Log media query classes we found for debugging
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('LZA Class Manager: Found ' . count($media_query_classes) . ' classes in media queries: ' . 
+				implode(', ', array_slice($media_query_classes, 0, 30)) . (count($media_query_classes) > 30 ? '...' : ''));
+		}
+		
+		// Step 6: Extract regular classes and build output
 		$output = '';
-
-		// Remove :root blocks to avoid duplicate processing
-		$css_without_root = preg_replace( '/:root\s*{[^}]+}/s', '', $css_content );
-
-		// Remove media queries to avoid duplicates
-		$css_without_media = preg_replace( '/@media[^{]*\{[^}]*\}[^}]*\}/s', '', $css_without_root );
-
-		// Now extract all remaining class selectors and their rules
-		if ( preg_match_all(
-			'/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s',
+		
+		if (preg_match_all('/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s',
 			$css_without_media,
 			$matches,
 			PREG_SET_ORDER
-		) ) {
-			foreach ( $matches as $match ) {
-				if ( isset( $match[1] ) && isset( $match[2] ) ) {
+		)) {
+			foreach ($matches as $match) {
+				if (isset($match[1]) && isset($match[2])) {
 					$class_name = $match[1];
 					$rules = $match[2];
-
-					// Simply wrap with editor selectors, preserving the original rules
-					$output .= ".editor-styles-wrapper .{$class_name},\n";
-					$output .= ".block-editor-block-list__block.{$class_name} {\n";
-					$output .= $rules; // Keep the rules exactly as they are
-					$output .= "}\n\n";
-				}
-			}
-		}
-
-		return $output;
-	}
-
-	/**
-	 * Extract classes from media queries
-	 *
-	 * @param string $css_content Full CSS content
-	 * @return string Editor-safe CSS for media query classes
-	 */
-	public function extract_media_query_classes( $css_content ) {
-		$output = '';
-
-		// Define a more robust pattern for matching media queries
-		$pattern = '#@media\s+([^{]+)\s*{\s*((?:[^{}]|(?R))*)\s*}#s';
-
-		if ( ! preg_match_all( $pattern, $css_content, $media_matches, PREG_SET_ORDER ) ) {
-			// If the complex pattern fails, try a simpler approach
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'LZA Class Manager: Complex media query regex failed, trying simpler approach' );
-			}
-
-			// Fallback to simple extraction using string functions
-			preg_match_all( '/@media[^{]*{/i', $css_content, $media_starts );
-
-			if ( ! empty( $media_starts[0] ) ) {
-				foreach ( $media_starts[0] as $media_start ) {
-					$start_pos = strpos( $css_content, $media_start );
-					if ( false === $start_pos ) {
+					
+					// Skip this class if it was found inside a media query
+					if (in_array($class_name, $media_query_classes, true)) {
+						if (defined('WP_DEBUG') && WP_DEBUG) {
+							error_log('LZA Class Manager: Skipping media query class: ' . $class_name);
+						}
 						continue;
 					}
-
-					$brace_count = 1;
-					$end_pos = $start_pos + strlen( $media_start );
-					$max_pos = strlen( $css_content );
-
-					// Find the end of this media query by matching braces
-					while ( $brace_count > 0 && $end_pos < $max_pos ) {
-						$char = $css_content[ $end_pos ];
-						if ( '{' === $char ) {
-							$brace_count++;
-						}
-						if ( '}' === $char ) {
-							$brace_count--;
-						}
-						$end_pos++;
-					}
-
-					if ( 0 === $brace_count ) {
-						// Extract the complete media query
-						$media_query = substr( $css_content, $start_pos, $end_pos - $start_pos );
-
-						// Extract the condition part
-						$condition = trim( substr( $media_start, 6, -1 ) ); // Remove "@media" and "{"
-
-						// Extract the content part (everything between the outer braces)
-						$content_start = strpos( $media_query, '{' ) + 1;
-						$content_length = strrpos( $media_query, '}' ) - $content_start;
-						$media_content = substr( $media_query, $content_start, $content_length );
-
-						// Start new media query block
-						$output .= "@media {$condition} {\n";
-
-						// Extract and transform class rules inside this media query
-						if ( preg_match_all(
-							'/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s',
-							$media_content,
-							$inner_matches,
-							PREG_SET_ORDER
-						) ) {
-							foreach ( $inner_matches as $inner_match ) {
-								if ( isset( $inner_match[1] ) && isset( $inner_match[2] ) ) {
-									$class_name = $inner_match[1];
-									$rules = $inner_match[2];
-
-									// Editor-safe selectors for classes in media query
-									$output .= "  .editor-styles-wrapper .{$class_name},\n";
-									$output .= "  .block-editor-block-list__block.{$class_name} {\n";
-									$output .= $rules;
-									$output .= "  }\n\n";
-								}
-							}
-						}
-
-						// Close the media query
-						$output .= "}\n\n";
-					}
-				}
-			}
-		} else {
-			// Process matches from the complex regex pattern
-			foreach ( $media_matches as $media_match ) {
-				if ( isset( $media_match[1] ) && isset( $media_match[2] ) ) {
-					$media_condition = trim( $media_match[1] );
-					$media_content = $media_match[2];
-
-					// Start new media query block
-					$output .= "@media {$media_condition} {\n";
-
-					// Extract all class rules inside this media query
-					if ( preg_match_all(
-						'/\.([a-zA-Z0-9_\-]+)(?:\s*,\s*\.(?:[a-zA-Z0-9_\-]+))*\s*\{([^}]+)\}/s',
-						$media_content,
-						$inner_matches,
-						PREG_SET_ORDER
-					) ) {
-						foreach ( $inner_matches as $inner_match ) {
-							if ( isset( $inner_match[1] ) && isset( $inner_match[2] ) ) {
-								$class_name = $inner_match[1];
-								$rules = $inner_match[2];
-
-								// Editor-safe selectors for classes in media query
-								$output .= "  .editor-styles-wrapper .{$class_name},\n";
-								$output .= "  .block-editor-block-list__block.{$class_name} {\n";
-								$output .= $rules;
-								$output .= "  }\n\n";
-							}
-						}
-					}
-
-					// Close the media query
+					
+					// Add to editor-safe CSS output
+					$output .= ".editor-styles-wrapper .{$class_name},\n";
+					$output .= ".block-editor-block-list__block.{$class_name} {\n";
+					$output .= $rules;
 					$output .= "}\n\n";
 				}
 			}
 		}
-
+		
 		return $output;
 	}
 
