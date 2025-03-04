@@ -1,2 +1,4 @@
-node_modules/
+.windsurfrules
+.cursorrules
+/node_modules/
 /vendor/
