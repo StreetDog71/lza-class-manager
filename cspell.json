@@ -1,0 +1,21 @@
+{
+    "version": "0.2",
+    "ignorePaths": [
+        "lza-cm.code-workspace",
+        "package-lock.json",
+        "package.json",
+        "composer.json",
+        "composer.lock",
+        "node_modules",
+        "vendor"
+    ],
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [
+        "ABSPATH",
+        "bloginfo",
+        "trailingslashit"
+    ],
+    "ignoreWords": [],
+    "import": []
+}

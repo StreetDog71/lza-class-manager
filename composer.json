@@ -1,0 +1,27 @@
+{
+    "name": "lza/lza-class-manager",
+    "authors": [
+        {
+            "name": "Lazy Algorithm",
+            "email": "dev@lza.pt"
+        }
+    ],
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.11",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "wp-coding-standards/wpcs": "^3.1",
+        "php-stubs/wordpress-stubs": "^6.7",
+        "pheromone/phpcs-security-audit": "^2.0",
+        "slevomat/coding-standard": "^8.16",
+        "phpcompatibility/php-compatibility": "^9.3"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "phpcs": "vendor/bin/phpcs --standard=.phpcs.xml",
+        "phpcbf": "vendor/bin/phpcbf --standard=.phpcs.xml"
+    }
+}
